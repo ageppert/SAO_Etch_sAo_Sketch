@@ -1,3 +1,15 @@
+# KiCad files
+# export files for BOM
+	*.csv
+	*.tsv
+	*.xml
+# backup files
+	*.bak
+# local project settings
+	*.kicad_prl
+	fp-info-cache
+# Other
+	.DS_Store
 
-Datasheets/.DS_Store
-Images/.DS_Store
+# remove pesky .DS_Store files:
+#   find . -name .DS_Store -print0 | xargs -0 git rm -f --ignore-unmatch
