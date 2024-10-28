@@ -788,7 +788,7 @@
       "workbook_filename": ""
     },
     "page_layout_descr_file": "",
-    "plot_directory": "SAO_Core4_V0.1_RENDERS_SCHEMATIC/",
+    "plot_directory": "../Schematic/",
     "spice_adjust_passive_values": false,
     "spice_current_sheet_as_root": false,
     "spice_external_command": "spice \"%I\"",

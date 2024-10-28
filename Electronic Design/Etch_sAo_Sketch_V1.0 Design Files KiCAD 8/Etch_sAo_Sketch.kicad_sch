@@ -3038,9 +3038,9 @@
 		)
 		(uuid "258ab8d2-7a15-4db5-8088-2147e146abae")
 	)
-	(text "LIS3DHTR 3-AXIS Accel               0x19 with SA0 high.\nOLED 128x128 1.5 inch SSD1327     0x3C (dec 60)"
+	(text "LIS3DHTR 3-AXIS Accel               0x19 with SDO/SA0 high (default)\nLIS3DHTR 3-AXIS Accel               0x18 with SDO/SA0 low (remove R1 and jumper pin 7 to ground)\nOLED 128x128 1.5 inch SSD1327     0x3C (dec 60)"
 		(exclude_from_sim no)
-		(at 99.822 171.831 0)
+		(at 16.256 185.547 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3101,7 +3101,7 @@
 	)
 	(text "I2C ADDRESS TABLE"
 		(exclude_from_sim no)
-		(at 99.06 159.385 0)
+		(at 15.494 173.101 0)
 		(effects
 			(font
 				(size 2.9972 2.9972)
@@ -3127,7 +3127,7 @@
 	)
 	(text "All 7-bit addresses should be greater\nthan 0x07 and less than 0x78 (120)."
 		(exclude_from_sim no)
-		(at 100.33 163.83 0)
+		(at 16.764 177.546 0)
 		(effects
 			(font
 				(size 1.27 1.27)

@@ -6,7 +6,7 @@
     This demo will work with a huge range of IDEs and hardware, but it was developed and tested with the following:
     Arduino IDE 2.3.2 
       Install "Arduino Mbed OS RP2040 Boards" v4.1.5 with Arduino Boards Manager
-      The Wire Library is included.
+        The Wire Library is included.
       Adafruit SSD1327 libray
       Adafruit LIS3DH and Adafruit Unified Sensor and BusIO
     RP2040-Zero (miniature Pico/RP2040 dev board) https://www.waveshare.com/rp2040-zero.htm
