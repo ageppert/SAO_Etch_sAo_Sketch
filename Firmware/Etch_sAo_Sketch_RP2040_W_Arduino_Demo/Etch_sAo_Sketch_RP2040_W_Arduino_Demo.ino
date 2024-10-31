@@ -20,6 +20,14 @@
     SAO GPIO1 pin connected to the left Analog Potentiometer
     SAO GPIO2 pin connected to the right Analog Potentiometer
   
+  Modes
+  Startup with the boot screen. After timeout, automatcally go to sketching mode with default white background.
+  In sketch mode, rotate pots to draw.
+  Gestures active during sketch mode:
+  Upsidedown, shake left/right to clear sketch zone.
+  Rightsideup, shake left/right to change background color (also clears screen).
+  Rightsideup, shake up/down to change pot input between Arduino Analog port (0-3.3V) or accelerometer analog ports (0.9-1.8V).
+
 */
 
 #include <Adafruit_SSD1327.h>
@@ -49,9 +57,11 @@
 #define OLED_GRAY                      7
 #define OLED_BLACK                     0
 Adafruit_SSD1327 display(OLED_HEIGHT, OLED_WIDTH, &Wire, OLED_RESET, 1000000);
-uint8_t color = OLED_WHITE;
-int16_t cursorX = 0;
-int16_t cursorY = 0;
+uint8_t color = OLED_WHITE;                   // 0-15 shades of gray
+int16_t cursorX = 0;                          // 0-127 pixels
+int16_t cursorY = 0;                          // 0-127 pixels
+bool    EASBackground = 0;                    // 0 = dark, 1 = white (default)
+bool    EASAnalogSource = 1;                  // 0 = accelerometer ADC, 1 = Arduino Analog Ports (default)
 
 #define ACCELEROMETER_ADDRESS       0x19      // LIS3DH Acceleromter default is 0x19
 Adafruit_LIS3DH lis = Adafruit_LIS3DH();
@@ -177,7 +187,7 @@ bool AccelerometerSenseGestureErase() {
   static uint16_t ShakeLeftCount;
   static uint16_t ShakeRightCount;
   static uint16_t ShakeSensitivyThreshold = 10000;
-  static uint16_t ShakeCountThreshold = 20;
+  static uint16_t ShakeCountThreshold = 30;
   AccelerometerReadAccel();
   // Is it up-side-down?
   if (lis.z > 10000) { UpSideDown = true;  }
@@ -199,12 +209,93 @@ bool AccelerometerSenseGestureErase() {
     ShakeLeftCount = 0;
     ShakeRightCount = 0;
   }
-  // If all conditions are met, clear the screen.
+  // Serial.print(ShakeLeftCount);
+  // Serial.print(", ");
+  // Serial.println(ShakeRightCount);
+  // If all conditions are met, signal screen clearing.
   if ((ShakeLeftCount > ShakeCountThreshold) && (ShakeRightCount > ShakeCountThreshold)) {
     ShakeLeftCount = 0;
     ShakeRightCount = 0;
-    OLEDFill(); 
+    return 1;
+    OLEDBackgroundReset();
   }
+  else { return 0; }
+}
+
+bool AccelerometerSenseGestureChangeBackground() {
+  bool RightSideUp;
+  bool ShakeLeft;
+  bool ShakeRight;
+  static uint16_t ShakeLeftCount;
+  static uint16_t ShakeRightCount;
+  static uint16_t ShakeSensitivyThreshold = 10000;
+  static uint16_t ShakeCountThreshold = 30;
+  AccelerometerReadAccel();
+  // Is it up-side-down?
+  if (lis.z < 10000) { RightSideUp = true;  }
+  else               { RightSideUp = false; }
+  // Check for Left shake
+  if (lis.y > ShakeSensitivyThreshold) { ShakeLeft = true;  }
+  else               { ShakeLeft = false; }
+  // Check for Right shake
+  if (lis.y < -ShakeSensitivyThreshold) { ShakeRight = true;  }
+  else                { ShakeRight = false; }
+  // If it is right-side-up...
+  if (RightSideUp) {
+    // ...Accumulate left/right shakes...
+    if (ShakeLeft) { ShakeLeftCount++; }
+    if (ShakeRight) { ShakeRightCount++; }
+  }
+  // ...otherwise reset the counters.
+  else {
+    ShakeLeftCount = 0;
+    ShakeRightCount = 0;
+  }
+  // If all conditions are met, signal background color change.
+  if ((ShakeLeftCount > ShakeCountThreshold) && (ShakeRightCount > ShakeCountThreshold)) {
+    ShakeLeftCount = 0;
+    ShakeRightCount = 0;
+    return 1;
+  }
+  else { return 0; }
+}
+
+bool AccelerometerSenseGestureChangeADCSource() {
+  bool RightSideUp;
+  bool ShakeUp;
+  bool ShakeDown;
+  static uint16_t ShakeUpCount;
+  static uint16_t ShakeDownCount;
+  static uint16_t ShakeSensitivyThreshold = 10000;
+  static uint16_t ShakeCountThreshold = 30;
+  AccelerometerReadAccel();
+  // Is it up-side-down?
+  if (lis.z < 10000) { RightSideUp = true;  }
+  else               { RightSideUp = false; }
+  // Check for up shake
+  if (lis.x > ShakeSensitivyThreshold) { ShakeUp = true;  }
+  else               { ShakeUp = false; }
+  // Check for down shake
+  if (lis.x < -ShakeSensitivyThreshold) { ShakeDown = true;  }
+  else                { ShakeDown = false; }
+  // If it is right-side-up...
+  if (RightSideUp) {
+    // ...Accumulate up/down shakes...
+    if (ShakeUp) { ShakeUpCount++; }
+    if (ShakeDown) { ShakeDownCount++; }
+  }
+  // ...otherwise reset the counters.
+  else {
+    ShakeUpCount = 0;
+    ShakeDownCount = 0;
+  }
+  // If all conditions are met, signal ADC source change.
+  if ((ShakeUpCount > ShakeCountThreshold) && (ShakeDownCount > ShakeCountThreshold)) {
+    ShakeUpCount = 0;
+    ShakeDownCount = 0;
+    return 1;
+  }
+  else { return 0; }
 }
 
 void OLEDClear() {
@@ -216,6 +307,12 @@ void OLEDFill() {
   display.fillRect(0,0,display.width(),display.height(),OLED_WHITE);
   display.display();
 }
+
+void OLEDBackgroundReset() {
+  if (EASBackground) { OLEDFill();  }
+  else               { OLEDClear(); }
+}
+
 
 void SAOGPIOPinInit (){
   // Nothing to do because analog input is default for Arduino.
@@ -311,7 +408,7 @@ void loop()
         display.display();
       }
 
-      if (ModeTimeOutCheck(20000)){ 
+      if (ModeTimeOutCheck(7000)){ 
         ModeTimeOutCheckReset();
         OLEDClear();
         TopLevelMode++; 
@@ -323,12 +420,32 @@ void loop()
     case MODE_SKETCH: {
       if (ModeTimeoutFirstTimeRun) { 
         Serial.println(">>> Entered MODE_SKETCH.");
-        OLEDFill();
+        OLEDBackgroundReset();
         ModeTimeoutFirstTimeRun = false;
       }
-      // Arduino Analog Reading
-      PotLeftADCCounts = analogRead(PIN_SAO_GPIO_1_ANA_POT_LEFT);
-      PotRightADCCounts = analogRead(PIN_SAO_GPIO_2_ANA_POT_RIGHT);
+      
+      // Get analog readings of the two pots
+      // Arduino Analog Reading (Arduino with RP2040 allows 0-3.3V, full-scale, reading)
+      if (EASAnalogSource) {
+        PotLeftADCCounts = analogRead(PIN_SAO_GPIO_1_ANA_POT_LEFT);
+        PotRightADCCounts = analogRead(PIN_SAO_GPIO_2_ANA_POT_RIGHT);
+      }
+      // Accelerometer Analog Reading (LIS3DH Analog reading is partial scale, limited between 0.9 and 1.8V)
+      // Also scale these readings up to what Arduino ADC uses, so the rest of the processing code below doesn't need to change.
+      else {
+        int16_t adc;
+        uint16_t volt;
+        adc = lis.readADC(1);
+        volt = map(adc, -32512, 32512, 1800, 900);
+        // Serial.print("ADC1:\t"); Serial.print(adc); 
+        // Serial.print(" ("); Serial.print(volt); Serial.print(" mV)  ");
+        PotLeftADCCounts = map(adc, -32512, 32512, 1023, 0);
+        adc = lis.readADC(2);
+        volt = map(adc, -32512, 32512, 1800, 900);
+        // Serial.print("ADC2:\t"); Serial.print(adc); 
+        // Serial.print(" ("); Serial.print(volt); Serial.print(" mV)  ");
+        PotRightADCCounts = map(adc, -32512, 32512, 1023, 0);
+      }
       // Apply glitch rejection
 
       // Apply some filtering
@@ -342,28 +459,40 @@ void loop()
       if (deltaAbsolute < PotHystersisLimit) {
         PotRightADCCounts = PotRightADCCountsOld;
       }
+      
       // Scale ADC counts to the useable screen with margins at end of pot travel.
       cursorX = map(PotLeftADCCounts , (1023-PotMarginAtLimit), PotMarginAtLimit, 0, 127);
       cursorY = map(PotRightADCCounts, PotMarginAtLimit, (1023-PotMarginAtLimit), 0, 127);
       PotLeftADCCountsOld = PotLeftADCCounts;
       PotRightADCCountsOld = PotRightADCCounts;
-      // LIS3DH Analog Reading limited between 0.9 and 1.8V
-      //  volt = map(adc, -32512, 32512, 1800, 900);
-      // display.writePixel(cursorX, cursorY, 16);
-      display.drawRect(cursorX, cursorY, 2, 2, OLED_BLACK);
-      display.display();
       // Serial.print("Cursor position: ");
       // Serial.print(cursorX);
       // Serial.print(",");
       // Serial.println(cursorY);
-      // AccelerometerReadAccel();
-      if (AccelerometerSenseGestureErase()) { OLEDClear(); }
-      // if (ModeTimeOutCheck(60000)){ 
-      //   ModeTimeOutCheckReset();
-      //   OLEDClear();
-      //   TopLevelMode = MODE_SKETCH; 
-      //   Serial.println(">>> Leaving MODE_SKETCH.");
-      // }
+
+      // Update the display
+      if (EASBackground) { display.drawRect(cursorX, cursorY, 2, 2, OLED_BLACK); }
+      else { display.drawRect(cursorX, cursorY, 2, 2, OLED_WHITE); }
+      display.display();
+
+      // Check for gestures
+      if (AccelerometerSenseGestureErase()) { 
+        OLEDBackgroundReset(); 
+        }
+      if (AccelerometerSenseGestureChangeBackground()) {
+        if (EASBackground) { 
+          EASBackground = 0;
+          OLEDBackgroundReset();
+          }
+        else {
+          EASBackground = 1;
+          OLEDBackgroundReset();
+          }
+        }
+      if (AccelerometerSenseGestureChangeADCSource()) {
+        if (EASAnalogSource) { EASAnalogSource = 0;  }
+        else                 { EASAnalogSource = 1; }
+        }
       break;
     }
 
