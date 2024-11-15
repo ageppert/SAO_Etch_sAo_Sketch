@@ -6,7 +6,10 @@ Follow this project at: https://hackaday.io/project/197581-etch-sao-sketch
 
 V1.1 - OLED VERSION
 
-Coming soon... Enabling full range of the analog pots via the accelerometer ADC inputs. And a taller male SAO header for easier connection to the main (red) PCBA.
+Coming soon... Refinements to include:
+1) Enabling full range of the analog pots via the accelerometer ADC inputs.
+2) A taller male SAO header for easier connection to the main (red) PCBA.
+3) Alignment hole size/position tweaks for the aignment spheres.
 
 V1.0 - OLED VERSION
 
