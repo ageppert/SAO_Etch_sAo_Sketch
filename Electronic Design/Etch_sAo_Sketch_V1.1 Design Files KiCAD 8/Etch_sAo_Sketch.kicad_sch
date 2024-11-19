@@ -3023,38 +3023,18 @@
 		)
 		(uuid "0d775918-f884-4234-a038-e8e7e7a07c1d")
 	)
-	(text "https://hackaday.io/project/175182-simple-add-ons-sao\nusing Sullins SFH11-NBPC-D03-ST-BK female header\nhttps://www.digikey.com/product-detail/en/sullins-connector-solutions/\nSFH11-NBPC-D03-ST-BK/S9717-ND/4558818"
+	(text "SAO PORT (6-pin, 2x3, 0.1 inch spacing, male pins)\n    https://hackaday.io/project/175182-simple-add-ons-sao\n    Adam Tech BHR-06-VUA male, polarized header\n    https://www.digikey.com/en/products/detail/adam-tech/BHR-06-VUA/10414837\n\nOLED DISPLAY (Address 0x3C, 128 x 128 pixel, 1.5 inch, 16 shade grayscale, SSD1327 controller)\n    https://learn.adafruit.com/adafruit-grayscale-1-5-128x128-oled-display\n    Optional address 0x3D selectable by moving resistor in upper left on the back of the blue OLED board.\n\nACCELEROMETER (Address 0x19, STM LIS3DHTR, 3-axis)\n    https://learn.sparkfun.com/tutorials/lis3dh-hookup-guide/all\n    CS is high for I2C mode.\n    ADC effective input range is 0.8 to 1.6 V (aka 1.2 +/- .4)\n    ADC 1 and 2 used for potentiometers.  ADC3 for internal temperature.\n    Optional address 0x18 if R3 (SA0 high) is moved to R4 position (SA0 low).\n\nOPTIONAL JP3 & JP4 CONFIG\n    Solder pads 1-2 to connect accelerometer inerrupt output pins to SAO GPIO 1&2.\n    Solder pads 2-3 to connect analog potentiometer outputs to SAO GPIO 1&2  \n\nPOTENTIOMETERS/ANALOG KNOBS (Accessed through accelerometer)\n    Left pot connected to accelerometer input ADC1.\n    Right pot connected to accelerometer input ADC2."
 		(exclude_from_sim no)
-		(at 16.764 176.276 0)
+		(at 20.32 196.596 0)
 		(effects
 			(font
 				(size 1.5 1.5)
+				(thickness 0.3)
+				(bold yes)
 			)
 			(justify left bottom)
 		)
-		(uuid "15733feb-45e7-4749-ab1b-5f17f0ad29f1")
-	)
-	(text "https://learn.adafruit.com/adafruit-grayscale-1-5-128x128-oled-display"
-		(exclude_from_sim no)
-		(at 76.454 160.274 0)
-		(effects
-			(font
-				(size 1.5 1.5)
-			)
-			(justify left bottom)
-		)
-		(uuid "258ab8d2-7a15-4db5-8088-2147e146abae")
-	)
-	(text "LIS3DHTR 3-AXIS Accel               0x19 with SDO/SA0 high (default)\nLIS3DHTR 3-AXIS Accel               0x18 with SDO/SA0 low (move R1 to R4)\nOLED 128x128 1.5 inch SSD1327     0x3C (dec 60)"
-		(exclude_from_sim no)
-		(at 16.002 199.771 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "4db6b9d2-7b71-434b-899d-e4fe7d491286")
+		(uuid "5295b353-2957-47d0-9b84-ae49c41714db")
 	)
 	(text "Ref: 0.79V"
 		(exclude_from_sim no)
@@ -3106,17 +3086,6 @@
 		)
 		(uuid "85d49468-c94e-46e1-a0db-665512928b15")
 	)
-	(text "https://learn.sparkfun.com/tutorials/lis3dh-hookup-guide/all\n\nCS is high for I2C mode.\nADC Input range is 0.8 to 1.6 V (aka 1.2 +/- .4)\nADC 1 and 2 for pots.\nADC3 for internal temperature."
-		(exclude_from_sim no)
-		(at 178.816 169.164 0)
-		(effects
-			(font
-				(size 1.5 1.5)
-			)
-			(justify left bottom)
-		)
-		(uuid "88a27e74-686f-4d60-9aad-be39d3ead7f5")
-	)
 	(text "ETCH sAo SKETCH - OLED VERSION"
 		(exclude_from_sim no)
 		(at 55.372 25.146 0)
@@ -3143,19 +3112,6 @@
 		)
 		(uuid "a5f61d2e-eedc-4137-9b4d-5f5cba1c21ee")
 	)
-	(text "I2C ADDRESS TABLE"
-		(exclude_from_sim no)
-		(at 15.24 187.325 0)
-		(effects
-			(font
-				(size 2.9972 2.9972)
-				(thickness 0.5994)
-				(bold yes)
-			)
-			(justify left bottom)
-		)
-		(uuid "beaab7fe-156c-4f81-b19b-c3a8580a6623")
-	)
 	(text "ACCELEROMETER"
 		(exclude_from_sim no)
 		(at 158.242 41.148 0)
@@ -3168,17 +3124,6 @@
 			(justify left bottom)
 		)
 		(uuid "dcb7f145-335c-417b-86a6-324355e9605d")
-	)
-	(text "All 7-bit addresses should be greater\nthan 0x07 and less than 0x78 (120)."
-		(exclude_from_sim no)
-		(at 16.51 191.77 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "f14d67f1-c513-40fc-8a22-f7d551f82853")
 	)
 	(text "SAO PORT"
 		(exclude_from_sim no)
