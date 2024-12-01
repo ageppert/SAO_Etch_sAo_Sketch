@@ -27,34 +27,36 @@
   Upsidedown, shake left/right to clear sketch zone.
   Rightsideup, shake left/right to change background color (also clears screen).
   Rightsideup, shake up/down to change pot input between Arduino Analog port (0-3.3V) or accelerometer analog ports (0.8-1.6V).
-
 */
 
-  /*********************************** ETCH SAO SKETCH -  FIRMWARE VERSION TABLE ************************************
-  | VERSION |  DATE      | MCU     | DESCRIPTION                                                                    |
-  -------------------------------------------------------------------------------------------------------------------
-  |  1.0.0  | 2019-10-08 | RP2040  | First draft, hurry up for Supercon!
-  |         |            |         |
-  -----------------------------------------------------------------------------------------------------------------*/
+/************************************ ETCH SAO SKETCH - FIRMWARE VERSION TABLE ************************************
+| VERSION |  DATE      | MCU     | DESCRIPTION                                                                    |
+-------------------------------------------------------------------------------------------------------------------
+|  1.0.0  | 2019-10-08 | RP2040  | First draft, hurry up for Supercon!
+|  1.1.0  | 2019-11-23 | RP2040  | Correct pot scaling for full range hardware mods with Accel ADC.
+|         |            |         |
+-----------------------------------------------------------------------------------------------------------------*/
+
+/************************************ ETCH SAO SKETCH - HARDWARE VERSION TABLE ************************************
+| VERSION |  DATE      | MCU     | DESCRIPTION                                                                    |
+-------------------------------------------------------------------------------------------------------------------
+|  1.0.0  | 2019-10-08 | RP2040  | First prototype, as built, getting it to come alive.
+|  1.1.0  | 2019-11-23 | RP2040  | V1.0.0 modified with resistors inline (10K highside and 4.8K lowside) with pots
+|         |            |         |   to enable full travel to map to accelerometer ADC 0.8 to 1.6V input range.
+|         |            |         |
+-----------------------------------------------------------------------------------------------------------------*/
+
+#define HARDWARE_VERSION_MAJOR  1
+#define HARDWARE_VERSION_MINOR  1
+#define HARDWARE_VERSION_PATCH  0
+#define MCU_FAMILY              RP2040
 
 #include <Adafruit_SSD1327.h>
 #include <Fonts/FreeMono9pt7b.h>  // https://learn.adafruit.com/adafruit-gfx-graphics-library/using-fonts
-
 //#include <Wire.h>                             // RP2040 Pico-Zero default I2C port is GPIO4 (SDA0) and GPIO5 (SCL0).
                                               // RP2040 Pico W default I2C port is GPIO4 (SDA0) and GPIO5 (SCL0).
 #include <Adafruit_LIS3DH.h>
 #include <Adafruit_Sensor.h>
-
-#define HARDWARE_VERSION_MAJOR  1
-#define HARDWARE_VERSION_MINOR  0
-#define HARDWARE_VERSION_PATCH  0
-#define MCU_FAMILY              RP2040
-  /*********************************** ETCH SAO SKETCH -  HARDWARE VERSION TABLE ************************************
-  | VERSION |  DATE      | MCU     | DESCRIPTION                                                                    |
-  -------------------------------------------------------------------------------------------------------------------
-  |  1.0.0  | 2019-10-08 | RP2040  | First prototype, as built, getting it to come alive.
-  |         |            |         |
-  -----------------------------------------------------------------------------------------------------------------*/
 
 #define OLED_ADDRESS                0x3C      // OLED SSD1327 is 0x3C
 #define OLED_RESET                    -1
@@ -65,25 +67,32 @@
 #define OLED_BLACK                     0
 Adafruit_SSD1327 display(OLED_HEIGHT, OLED_WIDTH, &Wire, OLED_RESET, 1000000);
 uint8_t color = OLED_WHITE;                   // 0-15 shades of gray
-int16_t cursorX = 0;                          // 0-127 pixels
-int16_t cursorY = 0;                          // 0-127 pixels
+uint16_t cursorX = 0;                          // 0-127 pixels
+uint16_t cursorY = 0;                          // 0-127 pixels
+uint16_t cursorXold = 0;                          // 0-127 pixels
+uint16_t cursorYold = 0;                          // 0-127 pixels
 bool    EASBackground = 0;                    // 0 = dark, 1 = white (default)
-bool    EASAnalogSource = 1;                  // 0 = accelerometer ADC, 1 = Arduino Analog Ports (default)
+bool    EASAnalogSource = 0;                  // 0 = accelerometer ADC, 1 = Arduino Analog Ports (default)
 
 #define ACCELEROMETER_ADDRESS       0x19      // LIS3DH Acceleromter default is 0x19
 Adafruit_LIS3DH lis = Adafruit_LIS3DH();
 
 #define PIN_SAO_GPIO_1_ANA_POT_LEFT   A0      // Configured as left analog pot
 #define PIN_SAO_GPIO_2_ANA_POT_RIGHT  A1      // Configured as left analog pot
-int16_t PotLeftADCCounts = 0;
-int16_t PotRightADCCounts = 0;
-int16_t PotLeftADCCountsOld = 0;
-int16_t PotRightADCCountsOld = 0;
-int16_t PotMarginAtLimit = 10;
-int16_t PotHystersisLimit = 12;
-int16_t PotGlitchLimit = 64;
-int16_t PotFilterSampleCount = 3;
-int16_t deltaAbsolute = 0;
+uint16_t PotLeftADCCounts = 0;
+uint16_t PotRightADCCounts = 0;
+uint16_t PotLeftADCCountsOld = 0;
+uint16_t PotRightADCCountsOld = 0;
+uint16_t PotMarginAtLimit = 10;
+uint16_t PotHystersisLimit = 12;
+uint16_t PotGlitchLimit = 64;
+uint16_t PotFilterSampleCount = 3;
+uint16_t deltaAbsolute = 0;
+uint16_t CursorHystersisLimit = 4;
+int16_t AccelADCRangeLowCounts  = -4000;      // Tested with 3.3V supply voltage, R5 10K, R6 4K7
+int16_t AccelADCRangeHighCounts = 32512;
+int16_t AccelADCRangeLowmV      =   900;
+int16_t AccelADCRangeHighmV     =  1400;
 
 enum TopLevelMode                             // Top Level Mode State Machine
 {
@@ -96,6 +105,69 @@ uint8_t  TopLevelMode = MODE_INIT;
 uint8_t  TopLevelModeDefault = MODE_BOOT_SCREEN;
 uint32_t ModeTimeoutDeltams = 0;
 uint32_t ModeTimeoutFirstTimeRun = true;
+
+class EmaFilterWithPriming
+// from https://blog.mbedded.ninja/programming/signal-processing/digital-filters/exponential-moving-average-ema-filter
+// with minimal round-off error, noticeable lag with the double precision calcs
+// Alpha (0 to 1) is cut-off frequency, lower number is more filtering
+{
+public:
+    EmaFilterWithPriming(double alpha) :
+        m_alpha(alpha), m_lastOutput(0.0), m_firstRun(true) {}
+
+    double Run(double input)
+    {
+        if (m_firstRun)
+        {
+            m_firstRun = false;
+            m_lastOutput = input; // Bypass filter and prime with input
+        }
+        else
+        {
+            m_lastOutput = m_alpha * input + (1 - m_alpha) * m_lastOutput;
+        }
+        return m_lastOutput;
+    }
+private:
+    double m_alpha;
+    double m_lastOutput;
+    bool m_firstRun;
+};
+EmaFilterWithPriming emaFilterX(0.1);
+EmaFilterWithPriming emaFilterY(0.1);
+
+// TODO: IMPLEMENT THE BIT SHIFT IIR THAT WORKS TO THE POLES
+class IIRFilterWithIntegers
+// from https://electronics.stackexchange.com/questions/30370/fast-and-memory-efficient-moving-average-calculation
+// and https://forum.arduino.cc/t/understanding-some-code/499217 
+// with round-off error, but very fast with bit shifting
+// where alpha = 1 / 2^BITFILTER
+{
+public:
+    IIRFilterWithIntegers(double alpha) :
+        m_alpha(alpha), m_lastOutput(0.0), m_firstRun(true) {}
+
+    double Run(double input)
+    {
+        if (m_firstRun)
+        {
+            m_firstRun = false;
+            m_lastOutput = input; // Bypass filter and prime with input
+        }
+        else
+        {
+            m_lastOutput = m_alpha * input + (1 - m_alpha) * m_lastOutput;
+        }
+        return m_lastOutput;
+    }
+private:
+    double m_alpha;
+    double m_lastOutput;
+    bool m_firstRun;
+};
+IIRFilterWithIntegers IIRFilterX(0.1);
+IIRFilterWithIntegers IIRFilterY(0.1);
+
 
 void setup()
 {
@@ -184,7 +256,7 @@ void AccelerometerReadAccel() {
   // Serial.print(" \tZ: "); Serial.print(event.acceleration.z);
   // Serial.println(" m/s^2 ");
 
-  Serial.println();
+  // Serial.println();
 }
 
 bool AccelerometerSenseGestureErase() {
@@ -353,6 +425,7 @@ bool ModeTimeOutCheck (uint32_t ModeTimeoutLimitms) {
 // -------------------------------------------------------------------------------------------
 void loop()
 {
+
   switch(TopLevelMode) {
     case MODE_INIT: {
       SerialInit();
@@ -415,7 +488,7 @@ void loop()
         display.display();
       }
 
-      if (ModeTimeOutCheck(7000)){ 
+      if (ModeTimeOutCheck(1000)){ 
         ModeTimeOutCheckReset();
         OLEDClear();
         TopLevelMode++; 
@@ -432,46 +505,139 @@ void loop()
       }
       
       // Get analog readings of the two pots
-      // Arduino Analog Reading (Arduino with RP2040 allows 0-3.3V, full-scale, reading)
       if (EASAnalogSource) {
+        // Arduino Analog Reading (Arduino with RP2040 allows 0-3.3V, full-scale reading with 10-bit resolution, 0-1023 )
         PotLeftADCCounts = analogRead(PIN_SAO_GPIO_1_ANA_POT_LEFT);
         PotRightADCCounts = analogRead(PIN_SAO_GPIO_2_ANA_POT_RIGHT);
+        // Scale ADC counts to the useable screen with margins at end of pot travel.
+        cursorX = map(PotLeftADCCounts , (1023-PotMarginAtLimit), PotMarginAtLimit, 0, 127);
+        cursorY = map(PotRightADCCounts, PotMarginAtLimit, (1023-PotMarginAtLimit), 0, 127);
       }
-      // Accelerometer Analog Reading (LIS3DH Analog reading is partial scale, limited between 0.9 and 1.8V)
-      // Also scale these readings up to what Arduino ADC uses, so the rest of the processing code below doesn't need to change.
       else {
+        // Accelerometer Analog Reading (LIS3DH Analog reading is partial scale, limited between 0.9 and 1.8V)
+        // Also scale these readings up to what Arduino ADC uses, so the rest of the processing code below doesn't need to change.
         int16_t adc;
         uint16_t volt;
         adc = lis.readADC(1);
-        volt = map(adc, -32512, 32512, 1800, 900);
+        // volt = map(adc, -32512, 32512, 1400, 900);
+        volt = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, AccelADCRangeHighmV, AccelADCRangeLowmV);
         // Serial.print("ADC1:\t"); Serial.print(adc); 
         // Serial.print(" ("); Serial.print(volt); Serial.print(" mV)  ");
-        PotLeftADCCounts = map(adc, -32512, 32512, 1023, 0);
+        // PotLeftADCCounts = map(adc, -32512, 32512, 1023, 0);
+        cursorX = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, 0, 127);
         adc = lis.readADC(2);
-        volt = map(adc, -32512, 32512, 1800, 900);
+        // volt = map(adc, -32512, 32512, 1400, 900);
+        volt = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, AccelADCRangeHighmV, AccelADCRangeLowmV);
         // Serial.print("ADC2:\t"); Serial.print(adc); 
         // Serial.print(" ("); Serial.print(volt); Serial.print(" mV)  ");
-        PotRightADCCounts = map(adc, -32512, 32512, 1023, 0);
+        // PotRightADCCounts = map(adc, -32512, 32512, 1023, 0);
+        cursorY = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, 127, 0);
       }
-      // Apply glitch rejection
+      // Glitch rejection
+      if (cursorX > 130) { cursorX = 0;}
+      if (cursorY > 130) { cursorY = 0;}
 
-      // Apply some filtering
+      // Hysteresis
+      // if (cursorX > (cursorXold + CursorHystersisLimit) ) { cursorX = cursorXold;}
+      // if (cursorX < (cursorXold - CursorHystersisLimit) ) { cursorX = cursorXold;}
 
-      // Apply some hysteresis
-      deltaAbsolute = abs(PotLeftADCCounts-PotLeftADCCountsOld);
-      if (deltaAbsolute < PotHystersisLimit) {
-        PotLeftADCCounts = PotLeftADCCountsOld;
-      }
-      deltaAbsolute = abs(PotRightADCCounts-PotRightADCCountsOld);
-      if (deltaAbsolute < PotHystersisLimit) {
-        PotRightADCCounts = PotRightADCCountsOld;
-      }
-      
-      // Scale ADC counts to the useable screen with margins at end of pot travel.
-      cursorX = map(PotLeftADCCounts , (1023-PotMarginAtLimit), PotMarginAtLimit, 0, 127);
-      cursorY = map(PotRightADCCounts, PotMarginAtLimit, (1023-PotMarginAtLimit), 0, 127);
+      // Filtering
+      #define FILTER_BITS   4
+      #define SHIFT_BITS    8
+      #define ROUNDUP       (2^SHIFT_BITS/2)
+      // K = 1 / 2 ^ FILTER_BITS
+      // y(n)        = K * x(n)     -  K * y(n-1)       +  y(n-1)
+      // filter_new  = frac_sample  -  frac_filter_old  +  filter_old
+      // local values are left-shifted up by SHIFT_BITS to maintain precision
+
+      Serial.print("cursorX_in:");
+      Serial.print(cursorX);
+      Serial.print(",");
+
+/*
+      uint32_t local_sampleX = ((uint32_t)cursorX) << SHIFT_BITS;
+      Serial.print("local_sampleX:");
+      Serial.print(local_sampleX);
+      Serial.print(",");
+
+      uint32_t local_sampleX_fraction = local_sampleX >> FILTER_BITS;
+      Serial.print("local_sampleX_fraction:");
+      Serial.print(local_sampleX_fraction);
+      Serial.print(",");
+
+      uint32_t local_cursorX_old = ((uint32_t)cursorXold) << SHIFT_BITS;
+      uint32_t local_cursorX_old_fraction = local_cursorX_old >> FILTER_BITS;
+
+      Serial.print("local_cursorX_old_fraction:-");
+      Serial.print(local_cursorX_old_fraction);
+      Serial.print(",");
+
+      Serial.print("local_cursorX_old:");
+      Serial.print(local_cursorX_old);
+      Serial.print(",");
+
+      uint32_t local_filterX_new = local_sampleX_fraction - local_cursorX_old_fraction + local_cursorX_old + ROUNDUP ;
+      Serial.print("local_filterX_new:");
+      Serial.print(local_filterX_new);
+      Serial.print(",");
+
+      Serial.print("cursorX:");
+      cursorX = (uint16_t) ( (local_filterX_new ) >> SHIFT_BITS);
+      if (cursorX > 127) {cursorX = 127;}
+      Serial.print(cursorX);
+      Serial.println();
+*/
+      double inputX = (double)cursorX;
+      double outputX = emaFilterX.Run(inputX);
+      cursorX = (uint16_t)outputX;
+      Serial.print("cursorX_out:");
+      Serial.print(cursorX);
+      Serial.println();
+/*
+      // Serial.print("cursorY:");
+      // Serial.print(cursorY);
+      // Serial.print(",");
+
+      uint32_t local_sampleY = ((uint32_t)cursorY) << SHIFT_BITS;
+      // Serial.print("local_sampleY:");
+      // Serial.print(local_sampleY);
+      // Serial.print(",");
+
+      uint32_t local_sampleY_fraction = local_sampleY >> FILTER_BITS;
+      // Serial.print("local_sampleY_fraction:");
+      // Serial.print(local_sampleY_fraction);
+      // Serial.print(",");
+
+      uint32_t local_cursorY_old = ((uint32_t)cursorYold) << SHIFT_BITS;
+      uint32_t local_cursorY_old_fraction = local_cursorY_old >> FILTER_BITS;
+
+      // Serial.print("local_cursorY_old_fraction:-");
+      // Serial.print(local_cursorY_old_fraction);
+      // Serial.print(",");
+
+      // Serial.print("local_cursorY_old:");
+      // Serial.print(local_cursorY_old);
+      // Serial.print(",");
+
+      uint32_t local_filterY_new = local_sampleY_fraction - local_cursorY_old_fraction + local_cursorY_old ;
+      // Serial.print("local_filterY_new:");
+      // Serial.print(local_filterY_new);
+      // Serial.print(",");
+
+      // Serial.print("cursorY:");
+      cursorY = (uint16_t) (local_filterY_new >> SHIFT_BITS);
+      if (cursorY > 127) {cursorY = 127;}
+      // Serial.print(cursorY);
+      // Serial.println();
+*/
+      double inputY = (double)cursorY;
+      double outputY = emaFilterY.Run(inputY);
+      cursorY = (uint16_t)outputY;
+
       PotLeftADCCountsOld = PotLeftADCCounts;
       PotRightADCCountsOld = PotRightADCCounts;
+      cursorXold = cursorX;
+      cursorYold = cursorY;
       // Serial.print("Cursor position: ");
       // Serial.print(cursorX);
       // Serial.print(",");
