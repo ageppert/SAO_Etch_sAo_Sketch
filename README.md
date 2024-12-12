@@ -18,6 +18,7 @@ Coming soon... Refinements to include:
 1) Enable full range of the analog pots via the accelerometer ADC inputs.
 2) Use a taller male SAO header for easier connection to the main (red) PCBA.
 3) Tweak alignment hole size/position for the alignment spheres and OLED position.
+
 Otherwise, it looks and functions just like V1.0.
 
 -------------
