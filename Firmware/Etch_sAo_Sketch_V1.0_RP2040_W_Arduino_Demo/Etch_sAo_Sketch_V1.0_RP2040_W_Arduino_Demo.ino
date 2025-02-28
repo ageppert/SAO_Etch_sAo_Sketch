@@ -1,41 +1,54 @@
 /* Etch sAo Sketch Demo with Arduino 
-  Github repo:  
+  Github repo: https://github.com/ageppert/SAO_Etch_sAo_Sketch
   Project page: https://hackaday.io/project/197581-etch-sao-sketch
 
-  Dependencies. 
+  DEPENDENCIES
     This demo will work with a huge range of IDEs and hardware, but it was developed and tested with the following:
     Arduino IDE 2.3.2 
-      Install "Arduino Mbed OS RP2040 Boards" v4.1.5 with Arduino Boards Manager
-        The Wire Library is included.
-      Adafruit SSD1327 libray
-      Adafruit LIS3DH and Adafruit Unified Sensor and BusIO
-    RP2040-Zero (miniature Pico/RP2040 dev board) https://www.waveshare.com/rp2040-zero.htm
+      Install "Arduino Mbed OS RP2040 Boards" v4.2.2 with Arduino Boards Manager
+        - The Wire Library is included.
+      Adafruit SSD1327 libray with dependencies:
+        - Adafruit BusIO
+        - Adafruit GFX Library
+      Adafruit LIS3DH libray with dependencies:
+        - Adafruit BusIO
+        - Adafruit Unified Sensor
 
-  OLED 1.5" 128x128 SSD1327: https://learn.adafruit.com/adafruit-grayscale-1-5-128x128-oled-display/arduino-wiring-and-test
-  Accelerometer LIS3DH: https://learn.sparkfun.com/tutorials/lis3dh-hookup-guide and https://learn.adafruit.com/adafruit-lis3dh-triple-axis-accelerometer-breakout/arduino  
-
-  Hardware Connections
-    The bottom SAO port (X1) is intended to provide full access to the Core4 Matrix, LEDs, and sense circuit reset.
+  HARDWARE CONNECTIONS
+    OLED 1.5" 128x128 SSD1327: https://learn.adafruit.com/adafruit-grayscale-1-5-128x128-oled-display/arduino-wiring-and-test
+    Accelerometer LIS3DH: https://learn.sparkfun.com/tutorials/lis3dh-hookup-guide and https://learn.adafruit.com/adafruit-lis3dh-triple-axis-accelerometer-breakout/arduino  
+    Demo board -> RP2040-Zero (miniature Pico/RP2040 dev board) https://www.waveshare.com/rp2040-zero.htm
+    The bottom SAO port (X1) is intended to provide full access to the accelerometer, screen, and analog pots.
     SAO I2C pins connect to the OLED and Accelerometer (which also has the potentionmeters connected to built-in ADCs).
     SAO GPIO1 pin connected to the left Analog Potentiometer
     SAO GPIO2 pin connected to the right Analog Potentiometer
   
-  Modes
+  MODES
   Startup with the boot screen. After timeout, automatcally go to sketching mode with default white background.
   In sketch mode, rotate pots to draw.
   Gestures active during sketch mode:
   Upsidedown, shake left/right to clear sketch zone.
   Rightsideup, shake left/right to change background color (also clears screen).
   Rightsideup, shake up/down to change pot input between Arduino Analog port (0-3.3V) or accelerometer analog ports (0.8-1.6V).
-
 */
 
-  /*********************************** ETCH SAO SKETCH -  FIRMWARE VERSION TABLE ************************************
-  | VERSION |  DATE      | MCU     | DESCRIPTION                                                                    |
-  -------------------------------------------------------------------------------------------------------------------
-  |  1.0.0  | 2019-10-08 | RP2040  | First draft, hurry up for Supercon!
-  |         |            |         |
-  -----------------------------------------------------------------------------------------------------------------*/
+/************************************ ETCH SAO SKETCH - FIRMWARE VERSION TABLE ************************************
+| VERSION |  DATE      | MCU     | DESCRIPTION                                                                    |
+-------------------------------------------------------------------------------------------------------------------
+|  1.0.0  | 2024-11-01 | RP2040  | First draft, hurry up for Supercon!
+|         |            |         |
+|         |            |         |
+-----------------------------------------------------------------------------------------------------------------*/
+
+/************************************ ETCH SAO SKETCH - HARDWARE VERSION TABLE ************************************
+| VERSION |  DATE      | MCU     | DESCRIPTION                                                                    |
+-------------------------------------------------------------------------------------------------------------------
+|  1.0    | 2024-09-27 |         | First prototype, as built, getting it to come alive. Analog input range of pots
+|         |            |         |   is much wider than accelerometer analog inputs can handle. Recommend to use
+|         |            |         |   only with 3.3V capable analog inputs of host MCU through SAO pport GPIO1&2.
+|         |            |         |
+|         |            |         |
+-----------------------------------------------------------------------------------------------------------------*/
 
 #include <Adafruit_SSD1327.h>
 #include <Fonts/FreeMono9pt7b.h>  // https://learn.adafruit.com/adafruit-gfx-graphics-library/using-fonts
