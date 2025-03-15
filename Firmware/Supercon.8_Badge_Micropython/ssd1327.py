@@ -1,107 +1,213 @@
-from machine import I2C, Pin
-import time
+"""
+MicroPython SSD1327 OLED I2C driver
+https://github.com/mcauser/micropython-ssd1327
 
-__version__ = '0.1.0'
+MIT License
+Copyright (c) 2017 Mike Causer
 
-class SSD1327():
-    WIDTH = 128
-    HEIGHT = 128
-    I2C_ADDRESS = 0x3C
-    
-    def __init__(self, i2c: I2C):
-        self.i2c = i2c
-        self.buffer = bytearray(self.WIDTH * self.HEIGHT // 8)  # Buffer for the display
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+__version__ = '1.1.1'
+
+from micropython import const
+import framebuf
+
+# commands
+SET_COL_ADDR          = const(0x15)
+SET_SCROLL_DEACTIVATE = const(0x2E)
+SET_ROW_ADDR          = const(0x75)
+SET_CONTRAST          = const(0x81)
+SET_SEG_REMAP         = const(0xA0)
+SET_DISP_START_LINE   = const(0xA1)
+SET_DISP_OFFSET       = const(0xA2)
+SET_DISP_MODE         = const(0xA4) # 0xA4 normal, 0xA5 all on, 0xA6 all off, 0xA7 when inverted
+SET_MUX_RATIO         = const(0xA8)
+SET_FN_SELECT_A       = const(0xAB)
+SET_DISP              = const(0xAE) # 0xAE power off, 0xAF power on
+SET_PHASE_LEN         = const(0xB1)
+SET_DISP_CLK_DIV      = const(0xB3)
+SET_SECOND_PRECHARGE  = const(0xB6)
+SET_GRAYSCALE_TABLE   = const(0xB8)
+SET_GRAYSCALE_LINEAR  = const(0xB9)
+SET_PRECHARGE         = const(0xBC)
+SET_VCOM_DESEL        = const(0xBE)
+SET_FN_SELECT_B       = const(0xD5)
+SET_COMMAND_LOCK      = const(0xFD)
+
+# registers
+REG_CMD  = const(0x80)
+REG_DATA = const(0x40)
+
+class SSD1327:
+    def __init__(self, width=128, height=128):
+        self.width = width
+        self.height = height
+        self.buffer = bytearray(self.width * self.height // 2)
+        self.framebuf = framebuf.FrameBuffer(self.buffer, self.width, self.height, framebuf.GS4_HMSB)
+
+        self.col_addr = ((128 - self.width) // 4, 63 - ((128 - self.width) // 4))
+        # 96x96     (8, 55)
+        # 128x128   (0, 63)
+
+        self.row_addr = (0, self.height - 1)
+        # 96x96     (0, 95)
+        # 128x128   (0, 127)
+
+        self.offset = 128 - self.height
+        # 96x96     32
+        # 128x128   0
+
+        self.poweron()
         self.init_display()
 
-    def command(self, cmd):
-        """Send a 1-byte command to the display."""
-        self.i2c.writeto(self.I2C_ADDRESS, bytearray([0x00, cmd]))
+    def init_display(self):
+        for cmd in (
+            SET_COMMAND_LOCK, 0x12, # Unlock
+            SET_DISP, # Display off
+            # Resolution and layout
+            SET_DISP_START_LINE, 0x00,
+            SET_DISP_OFFSET, self.offset, # Set vertical offset by COM from 0~127
+            # Set re-map
+            # Enable column address re-map
+            # Disable nibble re-map
+            # Horizontal address increment
+            # Enable COM re-map
+            # Enable COM split odd even
+            SET_SEG_REMAP, 0x51,
+            SET_MUX_RATIO, self.height - 1,
+            # Timing and driving scheme
+            SET_FN_SELECT_A, 0x01, # Enable internal VDD regulator
+            SET_PHASE_LEN, 0x51, # Phase 1: 1 DCLK, Phase 2: 5 DCLKs
+            SET_DISP_CLK_DIV, 0x01, # Divide ratio: 1, Oscillator Frequency: 0
+            SET_PRECHARGE, 0x08, # Set pre-charge voltage level: VCOMH
+            SET_VCOM_DESEL, 0x07, # Set VCOMH COM deselect voltage level: 0.86*Vcc
+            SET_SECOND_PRECHARGE, 0x01, # Second Pre-charge period: 1 DCLK
+            SET_FN_SELECT_B, 0x62, # Enable enternal VSL, Enable second precharge
+            # Display
+            SET_GRAYSCALE_LINEAR, # Use linear greyscale lookup table
+            SET_CONTRAST, 0x7f, # Medium brightness
+            SET_DISP_MODE, # Normal, not inverted
+            SET_COL_ADDR, self.col_addr[0], self.col_addr[1],
+            SET_ROW_ADDR, self.row_addr[0], self.row_addr[1],
+            SET_SCROLL_DEACTIVATE,
+            SET_DISP | 0x01): # Display on
+            self.write_cmd(cmd)
+        self.fill(0)
+        self.write_data(self.buffer)
 
-    def command2(self, cmd, cmd2):
-        """Send a 2-byte command to the display."""
-        self.i2c.writeto(self.I2C_ADDRESS, bytearray([0x00, cmd, cmd2]))
+    def poweroff(self):
+        self.write_cmd(SET_FN_SELECT_A)
+        self.write_cmd(0x00) # Disable internal VDD regulator, to save power
+        self.write_cmd(SET_DISP)
+
+    def poweron(self):
+        self.write_cmd(SET_FN_SELECT_A)
+        self.write_cmd(0x01) # Enable internal VDD regulator
+        self.write_cmd(SET_DISP | 0x01)
+
+    def contrast(self, contrast):
+        self.write_cmd(SET_CONTRAST)
+        self.write_cmd(contrast) # 0-255
+
+    def rotate(self, rotate):
+        self.poweroff()
+        self.write_cmd(SET_DISP_OFFSET)
+        self.write_cmd(self.height if rotate else self.offset)
+        self.write_cmd(SET_SEG_REMAP)
+        self.write_cmd(0x42 if rotate else 0x51)
+        self.poweron()
+
+    def invert(self, invert):
+        self.write_cmd(SET_DISP_MODE | (invert & 1) << 1 | (invert & 1)) # 0xA4=Normal, 0xA7=Inverted
+
+    def show(self):
+        self.write_cmd(SET_COL_ADDR)
+        self.write_cmd(self.col_addr[0])
+        self.write_cmd(self.col_addr[1])
+        self.write_cmd(SET_ROW_ADDR)
+        self.write_cmd(self.row_addr[0])
+        self.write_cmd(self.row_addr[1])
+        self.write_data(self.buffer)
+
+    def fill(self, col):
+        self.framebuf.fill(col)
+
+    def pixel(self, x, y, col):
+        self.framebuf.pixel(x, y, col)
+
+    def line(self, x1, y1, x2, y2, col):
+        self.framebuf.line(x1, y1, x2, y2, col)
+
+    def scroll(self, dx, dy):
+        self.framebuf.scroll(dx, dy)
+        # software scroll
+        
+    def text(self, string, x, y, col=15):
+        self.framebuf.text(string, x, y, col)
+
+    def write_cmd(self):
+        raise NotImplementedError
+
+    def write_data(self):
+        raise NotImplementedError
+
+
+class SSD1327_I2C(SSD1327):
+    def __init__(self, width, height, i2c, addr=0x3c):
+        self.i2c = i2c
+        self.addr = addr
+        self.cmd_arr = bytearray([REG_CMD, 0])  # Co=1, D/C#=0
+        self.data_list = [bytes((REG_DATA,)), None]
+        super().__init__(width, height)
+
+    def write_cmd(self, cmd):
+        self.cmd_arr[1] = cmd
+        self.i2c.writeto(self.addr, self.cmd_arr)
+
+    def write_data(self, data_buf):
+        segments = self.split_into_segments(data_buf)
+        for i, segment in enumerate(segments):
+            self.data_list[1] = segment
+            self.i2c.writevto(self.addr, self.data_list)
 
     def split_into_segments(self, ydata, segment_length=1024):
         """Split an array into segments, so we don't timeout"""
         return [ydata[i : i + segment_length] for i in range(0, len(ydata), segment_length)]
 
-    def data(self, xdata):
-        segments = self.split_into_segments(xdata)
-        for i, segment in enumerate(segments):
-            self.i2c.writeto_mem(self.I2C_ADDRESS, 0x40, segment)
 
-    def init_display(self):
-      # Init sequence for 128x128 OLED module
-      self.command(0xAE) # 
-      self.command2(0x81,0x80) #
-      self.command2(0xA0,0x5F) #
-      self.command2(0xA1,0x40) #
-      self.command2(0xA2,0x00) #
-      self.command(0xA6) #
-      self.command2(0xB1,0x11) #
-      self.command2(0xB3,0x00) #
-      self.command2(0xAB,0x01) #
-      self.command2(0xB6,0x04) #
-      self.command2(0xBE,0x0F) #
-      self.command2(0xBC,0x08) #
-      self.command2(0xD5,0x62) #
-      self.command2(0xFD,0x12) #
-      self.command(0xA4) #
-      self.command(0xAF) #
-
-    def clear(self):
-        """Clear the display buffer and update the display."""
-        self.buffer = bytearray(self.WIDTH * self.HEIGHT // 8)  # Clear buffer
-        self.show()
-
-    def show(self):
-        """Send the buffer to the display."""
-        self.command(0x21)  # Set column address
-        self.command(0x00)  # Start column
-        self.command(self.WIDTH - 1)  # End column
+class WS_OLED_128X128(SSD1327_I2C):
+    def __init__(self, i2c, addr=0x3c):
+        super().__init__(128, 128, i2c, addr)
         
-        self.command(0x22)  # Set page address
-        self.command(0x00)  # Start page
-        self.command((self.HEIGHT // 8) - 1)  # End page
-
-        self.data(self.buffer)  # Write the display buffer to the OLED
-
-    def draw_pixel(self, y, x, color):
-        """Set a pixel in the buffer."""
-        x = max(0, min([127,x])) # x: 0..127
-        y = max(0, min([127,y])) # y: 0..127
-        if (y>64): # Fix display bug (probably a register setting)
-           y=y-64
-        else:
-          y=y+64
-          
-        if 0 <= x < self.WIDTH and 0 <= y < self.HEIGHT:
-            index = x + (y // 8) * self.WIDTH
-            if color:
-                self.buffer[index] |= (1 << (y % 8))  # Set the bit
-            else:
-                self.buffer[index] &= ~(1 << (y % 8))  # Clear the bit
-
-    def fill_rect(self, x, y, width, height, color):
-        """Draw a filled rectangle on the buffer."""
-        for i in range(width):
-            for j in range(height):
-                self.draw_pixel(x + i, y + j, color)
-
 # Example usage
 if __name__ == "__main__":
+    from machine import Pin, SoftI2C
     # Initialize I2C
-    i2c = I2C(1, sda=Pin(26), scl=Pin(27), freq=400_000)
+    i2c = SoftI2C(sda=Pin(26), scl=Pin(27))
     
-    oled = SSD1327(i2c)
+    display = WS_OLED_128X128(i2c)
 
-    # Clear the display
-    oled.clear()
-    oled.clear()
-
-    for k in range(256):
-        x=k
-        y=k
-        oled.draw_pixel(x, y, 1) # on
-        oled.show()
+    display.fill(0)
+    for x in range(0,127):
+        for y in range(0,127):
+            display.pixel(x,y,15)
+            display.show()
+    display.show()
 

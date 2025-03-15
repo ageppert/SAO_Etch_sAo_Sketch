@@ -2,7 +2,9 @@ from machine import I2C, Pin
 import time
 
 counter = 0
-
+enable_calib = True
+etch_right = None
+etch_left = None
 ## do a quick spiral to test
 if petal_bus:
     for j in range(8):
@@ -14,6 +16,21 @@ if petal_bus:
 
 if etch_sao_sketch_device:
     etch_sao_sketch_device.shake() # clear display
+
+print("\n\n*****Boot done*****\n\n")
+if enable_calib:
+    # Calibrate after screen has started, to account for power drop caused by the OLED current draw
+    print("Starting ADC calibration routine:")
+    print("Within 5 seconds, in the following order")
+    print("1. Turn both knobs all the way right")
+    print("2. Turn both knobs all the way left")
+    success = etch_sao_sketch_device.try_calibration_routine()
+    if success:
+        print("ADC calibration succeeded.")
+        print(f"Calibration values: r={etch_sao_sketch_device.calib_right_zero_offset}, l={etch_sao_sketch_device.calib_left_zero_offset}, s={etch_sao_sketch_device.calib_voltage_scaling}")
+    else:
+        print("ADC calibration failed.")
+        print(f"Using default values: r={etch_sao_sketch_device.calib_right_zero_offset}, l={etch_sao_sketch_device.calib_left_zero_offset}, s={etch_sao_sketch_device.calib_voltage_scaling}")
 
 while True:
 
@@ -52,10 +69,26 @@ while True:
                 petal_bus.writeto_mem(0, i, bytes([0x00]))
     
     if etch_sao_sketch_device:
+        #print(etch_sao_sketch_device.left, etch_sao_sketch_device.right)
+        if etch_left is not None:
+            prev_left = etch_left
+        else:
+            prev_left = None
+        if etch_right is not None:
+            prev_right = etch_right
+        else:
+            prev_right = None
+        
         etch_left = etch_sao_sketch_device.left
-        etch_right = etch_sao_sketch_device.right
-        print (etch_left, etch_right)
-        etch_sao_sketch_device.draw_pixel(etch_left, etch_right, 1)
+        etch_right = 127 - etch_sao_sketch_device.right
+        
+        if prev_left is None:
+            prev_left = etch_left
+        if prev_right is None:
+            prev_right = etch_right
+        #print (etch_left, etch_right)
+        #etch_sao_sketch_device.draw_pixel(etch_left, etch_right, 15)
+        etch_sao_sketch_device.draw_line( prev_left, prev_right, etch_left, etch_right, 15)
         etch_sao_sketch_device.draw_display()
     
     time.sleep_ms(20)

@@ -46,7 +46,7 @@ class Lis3dh():
       if (left > 32512):
          left = left-65536
       left = left + 32512 # value from 0..65535
-      return (left // 508) # value from 0..128
+      return left 
       
     def _read_right(self):
       dataR = ((self._read_register(self.I2C_ADDRESS, self.RIGHT_ADC_REG, 2)))
@@ -54,8 +54,8 @@ class Lis3dh():
       if (right > 32512):
         right = right-65535
       right = right + 32512 # value from 0..65535
-      return (right // 508) # value from 0..128
-   
+      return right
+    
     @property
     def left(self):
         return self._read_left()
