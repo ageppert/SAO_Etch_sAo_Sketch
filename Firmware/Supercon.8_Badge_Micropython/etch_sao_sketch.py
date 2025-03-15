@@ -51,7 +51,11 @@ class EtchSaoSketch():
         # Within 5 seconds, in the following order
         # 1. Turn both knobs all the way right
         # 2. Turn both knobs all the way left
-
+        
+        self.draw_text("Calibrating", 10, 20, 15)
+        self.draw_text("1. Turn knobs", 10, 30, 15)
+        self.draw_text("to right limit", 10, 40, 15)
+        
         highest_r = 0
         highest_l = 0
         lowest_r = 65535
@@ -73,6 +77,8 @@ class EtchSaoSketch():
                         highest_l = l
                     if not calib_initiated:
                         print("Registered knobs all the way right")
+                        self.draw_text("2. Turn knobs", 10, 50, 15)
+                        self.draw_text("to left limit", 10, 60, 15)
                         deadline = time.ticks_add(time.ticks_ms(), 5000) # Extend deadline
                         calib_initiated = True
                 elif r < highest_r - 25000 and calib_initiated:
@@ -96,6 +102,22 @@ class EtchSaoSketch():
             self.calib_right_zero_offset = lowest_r
             self.calib_left_zero_offset = lowest_l
             self.calib_voltage_scaling = max(highest_r, highest_l) / (max(highest_r, highest_l) - min(lowest_r, lowest_l))
+            self.shake()
+            
+            self.draw_text("Calibration", 10, 20, 15)
+            self.draw_text("successful!", 10, 30, 15)
+            self.draw_text("Values:", 10, 40, 15)
+            self.draw_text(f"{self.calib_left_zero_offset},", 10, 50, 15)
+            self.draw_text(f"{self.calib_right_zero_offset},", 10, 60, 15)
+            self.draw_text(f"{self.calib_voltage_scaling:.6f}", 10, 70, 15)
+        else:
+            self.shake()
+            self.draw_text("Calibration", 10, 20, 15)
+            self.draw_text("failed...", 10, 30, 15)
+            self.draw_text("Defaults:", 10, 40, 15)
+            self.draw_text(f"{self.calib_left_zero_offset},", 10, 50, 15)
+            self.draw_text(f"{self.calib_right_zero_offset},", 10, 60, 15)
+            self.draw_text(f"{self.calib_voltage_scaling:.6f}", 10, 70, 15)
         return calib_successful
                     
     def shake(self):
@@ -110,7 +132,11 @@ class EtchSaoSketch():
     def draw_line(self, x1, y1, x2, y2, color):
         if self._display:
             self._display.line(x1, y1, x2, y2, color)
-            
+    
+    def draw_text(self, text, x, y, color):
+        self._display.text(text, x, y, color)
+        self.draw_display()
+    
     def draw_display(self):
         if self._display:
             self._display.show()
@@ -122,10 +148,14 @@ if __name__ == "__main__":
     sao = EtchSaoSketch(i2c1)
     sao.shake() # clear display
     
+    success = sao.try_calibration_routine()
+    print(success)
+    time.sleep(1)
+    
     while True:
-        left = sao.left
-        right = 128 - sao.right
-        #print (left, right)
-        sao.draw_pixel(left, right, 15)
-        sao.draw_display()
+       left = sao.left
+       right = 128 - sao.right
+       # print (left, right)
+       sao.draw_pixel(left, right, 15)
+       sao.draw_display()
 
