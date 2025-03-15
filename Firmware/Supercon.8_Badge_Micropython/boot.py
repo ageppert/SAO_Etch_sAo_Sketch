@@ -1,6 +1,6 @@
 ## HAL / devices here
 
-from machine import I2C, Pin
+from machine import I2C, Pin, SoftI2C
 import time
 import etch_sao_sketch
 
@@ -45,7 +45,7 @@ GPIOs = [ [gpio11, gpio12], [gpio21, gpio22], [gpio31, gpio32], [gpio41, gpio42]
 
 ## Initialize I2C peripherals
 i2c0 = I2C(0, sda=Pin(0), scl=Pin(1), freq=400_000)
-i2c1 = I2C(1, sda=Pin(26), scl=Pin(27), freq=400_000)
+i2c1 = SoftI2C(sda=Pin(26), scl=Pin(27)) # For some reason, the OLED on the Etch sAo Sketch does not like the micropython hardware i2c implementation. Haven't debugged it since SoftI2C seems to works.
 
 def which_bus_has_device_id(i2c_id, debug=False):
     '''Returns a list of i2c bus objects that have the requested id on them.
@@ -129,7 +129,6 @@ except:
     pass
 if not etch_sao_sketch_device:
     print(f"Warning: Etch sAo Sketch not found.")
-
 
 def touchwheel_read(bus):
     """Returns 0 for no touch, 1-255 clockwise around the circle from the south"""
