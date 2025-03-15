@@ -32,6 +32,8 @@ if enable_calib:
         print("ADC calibration failed.")
         print(f"Using default values: r={etch_sao_sketch_device.calib_right_zero_offset}, l={etch_sao_sketch_device.calib_left_zero_offset}, s={etch_sao_sketch_device.calib_voltage_scaling}")
 
+time.sleep(1)
+etch_sao_sketch_device.shake()
 while True:
 
     ## display button status on RGB
