@@ -1,7 +1,7 @@
 from machine import SoftI2C, Pin
 import time
 import ssd1327
-import lis3dh
+import lis3dh_wrapper
 
 __version__ = '0.1.5'
 
@@ -25,8 +25,16 @@ class EtchSaoSketch():
         self._display = ssd1327.WS_OLED_128X128(self._i2c)
         #self._display = ssd1327.SSD1327(self._i2c)
         print ("init accelerometer (and ADC)")
-        self._lis3dh = lis3dh.Lis3dh(self._i2c)
-        
+        self._lis3dh = lis3dh_wrapper.lis3dh_wrapper(self._i2c)
+        self._lis3dh._imu.set_tap(tap=2, threshold=127, time_limit=1, click_cfg=0x04)
+    
+    @property
+    def shake_detected(self):
+        return self._lis3dh._imu.tapped
+    
+    @property
+    def rotation(self):
+        return self._lis3dh.get_accell_rotation()
    
     @property
     def left(self):
@@ -151,11 +159,12 @@ if __name__ == "__main__":
     success = sao.try_calibration_routine()
     print(success)
     time.sleep(1)
+    sao.shake()
     
     while True:
        left = sao.left
        right = 128 - sao.right
-       # print (left, right)
+       print (left, right)
        sao.draw_pixel(left, right, 15)
        sao.draw_display()
 
