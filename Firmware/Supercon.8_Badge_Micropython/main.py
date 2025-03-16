@@ -1,10 +1,12 @@
 from machine import I2C, Pin
 import time
 
-counter = 0
 enable_calib = True
+enable_shaking = True
+
 etch_right = None
 etch_left = None
+
 ## do a quick spiral to test
 if petal_bus:
     for j in range(8):
@@ -34,6 +36,7 @@ if enable_calib:
 
 time.sleep(1)
 etch_sao_sketch_device.shake()
+
 while True:
 
     ## display button status on RGB
@@ -71,7 +74,11 @@ while True:
                 petal_bus.writeto_mem(0, i, bytes([0x00]))
     
     if etch_sao_sketch_device:
-        #print(etch_sao_sketch_device.left, etch_sao_sketch_device.right)
+        # Check if the badge has been flipped, and clear the screen if it has
+        if enable_shaking and etch_sao_sketch_device.shake_detected:
+            print("Shake detected")
+            etch_sao_sketch_device.shake()
+
         if etch_left is not None:
             prev_left = etch_left
         else:
