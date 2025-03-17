@@ -95,10 +95,8 @@ while True:
             prev_left = etch_left
         if prev_right is None:
             prev_right = etch_right
-        #print (etch_left, etch_right)
-        #etch_sao_sketch_device.draw_pixel(etch_left, etch_right, 15)
+
         etch_sao_sketch_device.draw_line( prev_left, prev_right, etch_left, etch_right, 15)
         etch_sao_sketch_device.draw_display()
     
-    time.sleep_ms(20)
     bootLED.off()

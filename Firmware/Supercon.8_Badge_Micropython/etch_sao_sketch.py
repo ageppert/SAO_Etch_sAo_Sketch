@@ -26,11 +26,11 @@ class EtchSaoSketch():
         #self._display = ssd1327.SSD1327(self._i2c)
         print ("init accelerometer (and ADC)")
         self._lis3dh = lis3dh_wrapper.lis3dh_wrapper(self._i2c)
-        self._lis3dh._imu.set_tap(tap=2, threshold=127, time_limit=1, click_cfg=0x04)
+        self._lis3dh.set_tap(tap=2, threshold=80, time_limit=1, click_cfg=0x04)
     
     @property
     def shake_detected(self):
-        return self._lis3dh._imu.tapped
+        return self._lis3dh.tapped
     
     @property
     def rotation(self):
