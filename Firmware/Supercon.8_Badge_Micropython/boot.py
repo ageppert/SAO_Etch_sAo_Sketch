@@ -45,7 +45,7 @@ GPIOs = [ [gpio11, gpio12], [gpio21, gpio22], [gpio31, gpio32], [gpio41, gpio42]
 
 ## Initialize I2C peripherals
 i2c0 = I2C(0, sda=Pin(0), scl=Pin(1), freq=400_000)
-i2c1 = SoftI2C(sda=Pin(26), scl=Pin(27)) # For some reason, the OLED on the Etch sAo Sketch does not like the micropython hardware i2c implementation. Haven't debugged it since SoftI2C seems to works.
+i2c1 = SoftI2C(sda=Pin(26), scl=Pin(27)) # The OLED on the Etch sAo Sketch does not like the micropython hardware i2c implementation. Hardware fix/bodge documented here: https://forums.raspberrypi.com/viewtopic.php?t=352484
 
 def which_bus_has_device_id(i2c_id, debug=False):
     '''Returns a list of i2c bus objects that have the requested id on them.

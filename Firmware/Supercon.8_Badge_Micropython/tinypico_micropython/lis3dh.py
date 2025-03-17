@@ -85,6 +85,8 @@ class LIS3DH:
         self._write_register_byte(_REG_CTRL1, 0x07)
         # Set 400Hz data rate.
         self.data_rate = DATARATE_400_HZ
+        # Allow time to stabilize after setting new datarate
+        time.sleep(0.01)
         # High res & BDU enabled.
         self._write_register_byte(_REG_CTRL4, 0x88)
         # Enable ADCs.
@@ -178,7 +180,6 @@ class LIS3DH:
             time.sleep(total_delay / avg_count)
         avg = tuple(value / avg_count for value in shake_accel)
         total_accel = math.sqrt(sum(map(lambda x: x * x, avg)))
-        print(total_accel)
         return total_accel > shake_threshold
 
     def read_adc_raw(self, adc):
