@@ -17,24 +17,23 @@ buttonB = Pin(9, Pin.IN, Pin.PULL_UP)
 buttonC = Pin(28, Pin.IN, Pin.PULL_UP)
 
 ## GPIOs
-gpio11 = Pin(7, Pin.OUT)
-gpio12 = Pin(6, Pin.OUT)
+# Set to input mode (0.8V) so Etch-sAo-sketch (I2C ADC on LIS3DH) and Bendy work properly.
+# If making use of some GPIO, make sure to initialize them otherwise. Set to Pin.OUT for 0V.
+gpio11 = Pin(7, Pin.IN)
+gpio12 = Pin(6, Pin.IN)
 
-gpio21 = Pin(5, Pin.OUT)
-gpio22 = Pin(4, Pin.OUT)
+gpio21 = Pin(5, Pin.IN)
+gpio22 = Pin(4, Pin.IN)
 
-gpio31 = Pin(3, Pin.OUT)
-gpio32 = Pin(2, Pin.OUT)
+gpio31 = Pin(3, Pin.IN)
+gpio32 = Pin(2, Pin.IN)
 
-gpio41 = Pin(22, Pin.OUT)
-gpio42 = Pin(21, Pin.OUT)
+gpio41 = Pin(22, Pin.IN)
+gpio42 = Pin(21, Pin.IN)
 
-gpio51 = Pin(20, Pin.OUT)
-gpio52 = Pin(19, Pin.OUT)
+gpio51 = Pin(20, Pin.IN)
+gpio52 = Pin(19, Pin.IN)
 
-# Etch-sAo-Sketch requires IN so that ADC works correctly
-#gpio61 = Pin(18, Pin.OUT)
-#gpio62 = Pin(17, Pin.OUT)
 gpio61 = Pin(18, Pin.IN)
 gpio62 = Pin(17, Pin.IN)
 
