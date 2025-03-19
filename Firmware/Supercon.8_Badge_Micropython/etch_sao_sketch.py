@@ -5,11 +5,6 @@ import lis3dh_wrapper
 
 __version__ = '0.1.5'
 
-# GPIO pins to input so I2C ADC on LIS3DH on Etch-sAo-sketch works.
-# We assume SAO is connected to "port 6" (pin 17/18)
-gpio61 = Pin(18, Pin.IN)
-gpio62 = Pin(17, Pin.IN)
-
 class EtchSaoSketch():
     _display = None
     

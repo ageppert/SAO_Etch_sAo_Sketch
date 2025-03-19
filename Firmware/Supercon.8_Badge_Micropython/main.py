@@ -16,26 +16,27 @@ if petal_bus:
             time.sleep_ms(30)
             petal_bus.writeto_mem(PETAL_ADDRESS, i, bytes([which_leds]))
 
+print("\n\n*****Boot done*****\n\n")
+
 if etch_sao_sketch_device:
     etch_sao_sketch_device.shake() # clear display
 
-print("\n\n*****Boot done*****\n\n")
-if enable_calib:
-    # Calibrate after screen has started, to account for power drop caused by the OLED current draw
-    print("Starting ADC calibration routine:")
-    print("Within 5 seconds, in the following order")
-    print("1. Turn both knobs all the way right")
-    print("2. Turn both knobs all the way left")
-    success = etch_sao_sketch_device.try_calibration_routine()
-    if success:
-        print("ADC calibration succeeded.")
-        print(f"Calibration values: r={etch_sao_sketch_device.calib_right_zero_offset}, l={etch_sao_sketch_device.calib_left_zero_offset}, s={etch_sao_sketch_device.calib_voltage_scaling}")
-    else:
-        print("ADC calibration failed.")
-        print(f"Using default values: r={etch_sao_sketch_device.calib_right_zero_offset}, l={etch_sao_sketch_device.calib_left_zero_offset}, s={etch_sao_sketch_device.calib_voltage_scaling}")
+    if enable_calib:
+        # Calibrate after screen has started, to account for power drop caused by the OLED current draw
+        print("Starting ADC calibration routine:")
+        print("Within 5 seconds, in the following order")
+        print("1. Turn both knobs all the way right")
+        print("2. Turn both knobs all the way left")
+        success = etch_sao_sketch_device.try_calibration_routine()
+        if success:
+            print("ADC calibration succeeded.")
+            print(f"Calibration values: r={etch_sao_sketch_device.calib_right_zero_offset}, l={etch_sao_sketch_device.calib_left_zero_offset}, s={etch_sao_sketch_device.calib_voltage_scaling}")
+        else:
+            print("ADC calibration failed.")
+            print(f"Using default values: r={etch_sao_sketch_device.calib_right_zero_offset}, l={etch_sao_sketch_device.calib_left_zero_offset}, s={etch_sao_sketch_device.calib_voltage_scaling}")
 
-time.sleep(1)
-etch_sao_sketch_device.shake()
+    time.sleep(1)
+    etch_sao_sketch_device.shake()
 
 while True:
 
