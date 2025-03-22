@@ -139,7 +139,8 @@ class EtchSaoSketch():
             self._display.line(x1, y1, x2, y2, color)
     
     def draw_text(self, text, x, y, color):
-        self._display.text(text, x, y, color)
+        if self._display:
+            self._display.text(text, x, y, color)
         self.draw_display()
     
     def draw_display(self):
