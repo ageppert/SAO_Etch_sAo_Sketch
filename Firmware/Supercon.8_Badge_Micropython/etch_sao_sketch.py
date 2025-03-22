@@ -25,7 +25,9 @@ class EtchSaoSketch():
     
     @property
     def shake_detected(self):
+        # tapped is faster, shake takes too much time
         return self._lis3dh.tapped
+        #return self._lis3dh.shake(shake_threshold=19.5, avg_count=10)
     
     @property
     def rotation(self):
