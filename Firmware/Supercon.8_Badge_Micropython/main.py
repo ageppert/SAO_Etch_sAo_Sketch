@@ -39,7 +39,7 @@ if etch_sao_sketch_device:
     etch_sao_sketch_device.shake()
 
 if etch_sao_sketch_device:
-    cycles = 20
+    cycles = 20 # 20 seems OK with fully populated badge, 40 is OK with only Etch sAo Sketch connected, but brings little additional benefit
     avg_cycles = cycles
     avg_left = 0
     avg_right = 0
