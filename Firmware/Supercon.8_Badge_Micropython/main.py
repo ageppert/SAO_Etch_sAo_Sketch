@@ -38,6 +38,16 @@ if etch_sao_sketch_device:
     time.sleep(1)
     etch_sao_sketch_device.shake()
 
+if etch_sao_sketch_device:
+    cycles = 20
+    avg_cycles = cycles
+    avg_left = 0
+    avg_right = 0
+    etch_left = etch_sao_sketch_device.left
+    etch_right = 127 - etch_sao_sketch_device.right
+    prev_left = etch_left
+    prev_right = etch_right
+
 while True:
 
     ## display button status on RGB
@@ -80,24 +90,25 @@ while True:
             print("Shake detected")
             etch_sao_sketch_device.shake()
 
-        if etch_left is not None:
-            prev_left = etch_left
-        else:
-            prev_left = None
-        if etch_right is not None:
-            prev_right = etch_right
-        else:
-            prev_right = None
+        avg_left += etch_sao_sketch_device.left
+        avg_right += 127 - etch_sao_sketch_device.right
+
+        if avg_cycles == 0:
+            etch_left = int(avg_left/cycles)
+            etch_right = int(avg_right/cycles)
         
-        etch_left = etch_sao_sketch_device.left
-        etch_right = 127 - etch_sao_sketch_device.right
-        
-        if prev_left is None:
+            etch_sao_sketch_device.draw_line(prev_left, prev_right, etch_left, etch_right, 15)
+            etch_sao_sketch_device.draw_display()
+
             prev_left = etch_left
-        if prev_right is None:
             prev_right = etch_right
 
-        etch_sao_sketch_device.draw_line( prev_left, prev_right, etch_left, etch_right, 15)
-        etch_sao_sketch_device.draw_display()
-    
+            avg_cycles = cycles
+            avg_left = 0
+            avg_right = 0
+        else:
+            avg_cycles -= 1
+
+
     bootLED.off()
+    #time.sleep_ms(20)
