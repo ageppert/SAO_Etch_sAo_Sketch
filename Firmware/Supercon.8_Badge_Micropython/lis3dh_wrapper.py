@@ -67,6 +67,9 @@ class lis3dh_wrapper:
     @property
     def tapped(self):
         return self._imu.tapped
+    
+    def shake(self, shake_threshold=19.5, avg_count=100, total_delay=0.01):
+        return self._imu.shake(shake_threshold, avg_count, total_delay)
 
 # Example usage
 if __name__ == "__main__":    # If we have found the LIS3DH
