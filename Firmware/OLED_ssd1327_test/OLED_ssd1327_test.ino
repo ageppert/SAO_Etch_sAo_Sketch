@@ -17,6 +17,8 @@
 //Adafruit_SSD1327 display(128, 128, &SPI, OLED_DC, OLED_RESET, OLED_CS);
 
 // I2C
+MbedI2C i2c(0,1);
+
 Adafruit_SSD1327 display(128, 128, &Wire, OLED_RESET, 1000000);
 
 #define NUMFLAKES 10
