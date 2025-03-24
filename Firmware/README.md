@@ -10,7 +10,7 @@ The Etch sAo Sketch requires a microcontroller with an I2C bus to run. This fold
 
 "Supercon.8_Badge_Micropython" are the files needed to run the Etch sAo Sketch with the 2024 Supercon.8 and Hackaday Europe 2025 Badges using Micropython. Etch-sAo-Sketch must be plugged into the port marked "6" when the badge boots up. If used, the petal and touchwheel SAOs goes in "1", "2" or "3".
 
-<img src="Images/Simen says HELP.jpeg" height="200">
+<img src="https://github.com/ageppert/SAO_Etch_sAo_Sketch/tree/main/Images/Simen says HELP.jpeg" height="200">
 
 Special thanks to these folks for the Micropython work!
 
