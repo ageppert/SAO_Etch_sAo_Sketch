@@ -25,7 +25,7 @@ This version was an un-fabricated step in the development for Hackaday Europe 20
 # V1.1 - OLED VERSION - Small batch to sell on Tindie after V1.0 stock is depleted
 
 Refinements include:
-1) Enable full range of the analog pots via the accelerometer ADC inputs, with the option to still use analog signals on GPIO 1 and 2.
+1) Enable full range of the analog pots via the accelerometer's [reduced range] ADC inputs, with the option to still use analog signals on GPIO 1 and 2.
 2) Use a taller male SAO header for easier connection to the main (red) PCBA.
 3) Tweak alignment hole size/position for the alignment spheres and OLED position.
 
