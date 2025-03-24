@@ -8,4 +8,21 @@ The Etch sAo Sketch requires a microcontroller with an I2C bus to run. This fold
 
 "OLED_ssd1327_test" is Arduino sample code to activate the OLED screen.
 
-"Supercon.8_Badge_Micropython" are the files needed to run the Etch sAo Sketch with the Supercon 8 Badge using Micropython. Etch-sAo-Sketch must be plugged into the port marked "6" when the badge boots up. If used, the petal and touchwheel SAOs goes in "1", "2" or "3". If the drawing area is smaller than the size of the screen, change the `calib_` values in `etch_sao_sketch.py` (`calib_left_zero_offset`, `calib_right_zero_offset`, and `calib_voltage_scaling`). The default values **work for me™**. Shaking the SAO will clear the screen, to turn off this functionality set `enable_shaking = False` in `main.py`. Sample code provided by Derek Jamison. https://youtube.com/@MrDerekJamison 
+"Supercon.8_Badge_Micropython" are the files needed to run the Etch sAo Sketch with the 2024 Supercon.8 and Hackaday Europe 2025 Badges using Micropython. Etch-sAo-Sketch must be plugged into the port marked "6" when the badge boots up. If used, the petal and touchwheel SAOs goes in "1", "2" or "3".
+
+Special thanks to these folks for the Micropython work!
+
+https://github.com/AakaFosfor
+Added filtering to analog signals.
+
+https://github.com/ORelio
+Bug fix, compatibility with Bendy SAO.
+
+https://github.com/SimenZhor
+Enabled full functionality and wrestling the SSD1327 setup config, live at Hackaday Europe!
+Added calibration to the ends of the analog pot ranges.
+
+https://github.com/jamisonderek
+https://youtube.com/@MrDerekJamison
+Supercon.8 2024 sample code provided by Derek Jamison.
+"If the drawing area is smaller than the size of the screen, change the `calib_` values in `etch_sao_sketch.py` (`calib_left_zero_offset`, `calib_right_zero_offset`, and `calib_voltage_scaling`). The default values **work for me™**. Shaking the SAO will clear the screen, to turn off this functionality set `enable_shaking = False` in `main.py`."
