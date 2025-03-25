@@ -44,7 +44,14 @@ GPIOs = [ [gpio11, gpio12], [gpio21, gpio22], [gpio31, gpio32], [gpio41, gpio42]
 
 ## Initialize I2C peripherals
 i2c0 = I2C(0, sda=Pin(0), scl=Pin(1), freq=400_000)
-i2c1 = SoftI2C(sda=Pin(26), scl=Pin(27)) # The OLED on the Etch sAo Sketch does not like the micropython hardware i2c implementation. Hardware fix/bodge documented here: https://forums.raspberrypi.com/viewtopic.php?t=352484
+
+# The OLED on the Etch sAo Sketch does not like the micropython hardware i2c implementation.
+# Hardware fix/bodge documented here: https://forums.raspberrypi.com/viewtopic.php?t=352484
+# (remove ZD1 and ZD2 from the OLED display and change R7 and R8 from 1K to 0R)
+# If this HW modification is combined with the extended I2C timeout and the max_segment_length=512 in EtchSaoSketch, the HW I2C can be used.
+i2c1 = I2C(1, sda=Pin(26), scl=Pin(27), freq=400_000, timeout=500000)
+# as a fallback, the SW I2C:
+# i2c1 = SoftI2C(sda=Pin(26), scl=Pin(27))
 
 def which_bus_has_device_id(i2c_id, debug=False):
     '''Returns a list of i2c bus objects that have the requested id on them.
