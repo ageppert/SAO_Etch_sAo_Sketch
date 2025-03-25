@@ -16,9 +16,7 @@ class EtchSaoSketch():
         print ("saving i2c bus")
         self._i2c = i2c_bus
         print ("init ssd1327 display")
-        # a = ssd1327.SSD1327_I2C()
-        self._display = ssd1327.WS_OLED_128X128(self._i2c)
-        #self._display = ssd1327.SSD1327(self._i2c)
+        self._display = ssd1327.WS_OLED_128X128(self._i2c, max_segment_length=512)
         print ("init accelerometer (and ADC)")
         self._lis3dh = lis3dh_wrapper.lis3dh_wrapper(self._i2c)
         self._lis3dh.set_tap(tap=2, threshold=80, time_limit=1, click_cfg=0x04)
