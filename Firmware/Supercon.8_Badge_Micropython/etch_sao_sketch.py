@@ -67,9 +67,12 @@ class EtchSaoSketch():
         left_registered = False
         calib_successful = False
         deadline = time.ticks_add(time.ticks_ms(), 5000)
-        while time.ticks_diff(deadline, time.ticks_ms()) > 0:
+        while time.ticks_diff(deadline, time.ticks_ms()) > 0 and not left_registered:
             r = self._lis3dh.right
             l = self._lis3dh.left
+            # Debug:
+            # self.draw_pixel(int(r/(lowest_r/128)), int(l/(lowest_l/128)), 10)
+            # self.draw_display()
             if abs(r-l) < 1000:
                 # Both knobs are more or less in the same position
                 if r > 60000:
@@ -93,6 +96,7 @@ class EtchSaoSketch():
                     if not left_registered:
                         print("Registered knobs all the way left")
                         left_registered = True
+        self.clear_display()
         if lowest_r < 65535 and lowest_l < 65535 and highest_r > 0 and highest_l > 0:
             calib_successful = True
             # Since we are not averaging the low and high values over time, we are reading uncommonly low and high values.
@@ -105,25 +109,20 @@ class EtchSaoSketch():
             self.calib_right_zero_offset = lowest_r
             self.calib_left_zero_offset = lowest_l
             self.calib_voltage_scaling = max(highest_r, highest_l) / (max(highest_r, highest_l) - min(lowest_r, lowest_l))
-            self.shake()
             
             self.draw_text("Calibration", 10, 20, 15)
             self.draw_text("successful!", 10, 30, 15)
             self.draw_text("Values:", 10, 40, 15)
-            self.draw_text(f"{self.calib_left_zero_offset},", 10, 50, 15)
-            self.draw_text(f"{self.calib_right_zero_offset},", 10, 60, 15)
-            self.draw_text(f"{self.calib_voltage_scaling:.6f}", 10, 70, 15)
         else:
-            self.shake()
             self.draw_text("Calibration", 10, 20, 15)
             self.draw_text("failed...", 10, 30, 15)
             self.draw_text("Defaults:", 10, 40, 15)
-            self.draw_text(f"{self.calib_left_zero_offset},", 10, 50, 15)
-            self.draw_text(f"{self.calib_right_zero_offset},", 10, 60, 15)
-            self.draw_text(f"{self.calib_voltage_scaling:.6f}", 10, 70, 15)
+        self.draw_text(f"{self.calib_left_zero_offset},", 10, 50, 15)
+        self.draw_text(f"{self.calib_right_zero_offset},", 10, 60, 15)
+        self.draw_text(f"{self.calib_voltage_scaling:.6f}", 10, 70, 15)
         return calib_successful
                     
-    def shake(self):
+    def clear_display(self):
         if self._display:
             self._display.fill(0)
             self.draw_display()
@@ -150,12 +149,12 @@ if __name__ == "__main__":
     i2c1 = SoftI2C(sda=Pin(26), scl=Pin(27))
     
     sao = EtchSaoSketch(i2c1)
-    sao.shake() # clear display
+    sao.clear_display()
     
     success = sao.try_calibration_routine()
     print(success)
     time.sleep(1)
-    sao.shake()
+    sao.clear_display()
     
     while True:
        left = sao.left

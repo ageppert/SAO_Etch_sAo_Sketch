@@ -16,7 +16,7 @@ if etch_sao_sketch_device:
     enable_calib = True
     enable_shaking = True
 
-    etch_sao_sketch_device.shake() # clear display
+    etch_sao_sketch_device.clear_display()
 
     if enable_calib:
         # Calibrate after screen has started, to account for power drop caused by the OLED current draw
@@ -33,7 +33,7 @@ if etch_sao_sketch_device:
             print(f"Using default values: r={etch_sao_sketch_device.calib_right_zero_offset}, l={etch_sao_sketch_device.calib_left_zero_offset}, s={etch_sao_sketch_device.calib_voltage_scaling}")
 
     time.sleep(1)
-    etch_sao_sketch_device.shake()
+    etch_sao_sketch_device.clear_display()
 
     cycles = 20 # 20 seems OK with fully populated badge, 40 is OK with only Etch sAo Sketch connected, but brings little additional benefit
     avg_cycles = cycles
@@ -84,7 +84,7 @@ while True:
         # Check if the badge has been flipped, and clear the screen if it has
         if enable_shaking and etch_sao_sketch_device.shake_detected:
             print("Shake detected")
-            etch_sao_sketch_device.shake()
+            etch_sao_sketch_device.clear_display()
 
         avg_left += etch_sao_sketch_device.left
         avg_right += 127 - etch_sao_sketch_device.right
