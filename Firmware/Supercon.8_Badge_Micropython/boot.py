@@ -129,7 +129,7 @@ if not touchwheel_bus:
 
 etch_sao_sketch_device = None
 try:
-    etch_sao_sketch_device = etch_sao_sketch.EtchSaoSketch(i2c1)
+    etch_sao_sketch_device = etch_sao_sketch.EtchSaoSketch(i2c1, enable_calib=True, enable_shaking=True)
     print("Etch-sAo-Sketch on i2c1")
 except: 
     pass
