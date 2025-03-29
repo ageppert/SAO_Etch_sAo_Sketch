@@ -1,12 +1,6 @@
 from machine import I2C, Pin
 import time
 
-enable_calib = True
-enable_shaking = True
-
-etch_right = None
-etch_left = None
-
 ## do a quick spiral to test
 if petal_bus:
     for j in range(8):
@@ -19,6 +13,9 @@ if petal_bus:
 print("\n\n*****Boot done*****\n\n")
 
 if etch_sao_sketch_device:
+    enable_calib = True
+    enable_shaking = True
+
     etch_sao_sketch_device.shake() # clear display
 
     if enable_calib:
@@ -38,7 +35,6 @@ if etch_sao_sketch_device:
     time.sleep(1)
     etch_sao_sketch_device.shake()
 
-if etch_sao_sketch_device:
     cycles = 20 # 20 seems OK with fully populated badge, 40 is OK with only Etch sAo Sketch connected, but brings little additional benefit
     avg_cycles = cycles
     avg_left = 0
@@ -94,8 +90,8 @@ while True:
         avg_right += 127 - etch_sao_sketch_device.right
 
         if avg_cycles == 0:
-            etch_left = int(avg_left/cycles)
-            etch_right = int(avg_right/cycles)
+            etch_left = min(max(int(avg_left/cycles), 0), 127)
+            etch_right = min(max(int(avg_right/cycles), 0), 127)
         
             etch_sao_sketch_device.draw_line(prev_left, prev_right, etch_left, etch_right, 15)
             etch_sao_sketch_device.draw_display()
