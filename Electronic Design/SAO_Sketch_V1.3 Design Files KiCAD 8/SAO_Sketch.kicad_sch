@@ -3075,7 +3075,7 @@
 		)
 		(uuid "85d49468-c94e-46e1-a0db-665512928b15")
 	)
-	(text "SAO SKETCH - OLED VERSION\nFOR HACKADAY EUROPE 2025"
+	(text "SAO SKETCH - OLED VERSION\n(V1.3) FOR HACKADAY EUROPE 2025"
 		(exclude_from_sim no)
 		(at 140.208 31.75 0)
 		(effects
@@ -3123,6 +3123,20 @@
 		)
 		(uuid "a5f61d2e-eedc-4137-9b4d-5f5cba1c21ee")
 	)
+	(text "There is too much combined pull-up resistance with this board,\nthe OLED board, the Hackaday Badge, and the Pico. This inhibits\nI2C hardware implementations from working with the OLED display.\nSOLUTION A: Firmware workaround is to use software I2C.\n   See: https://github.com/ageppert/SAO_Etch_sAo_Sketch/pull/1\nSOLUTION B: Hardware mods to remove interfering components.\n   See: https://github.com/ageppert/SAO_Etch_sAo_Sketch/issues/8"
+		(exclude_from_sim no)
+		(at 159.766 165.608 0)
+		(effects
+			(font
+				(size 1.524 1.524)
+				(thickness 1.6)
+				(bold yes)
+				(color 255 0 0 1)
+			)
+			(justify left bottom)
+		)
+		(uuid "aebd9a05-2a98-4931-a529-1494d0a023fd")
+	)
 	(text "ACCELEROMETER"
 		(exclude_from_sim no)
 		(at 158.242 41.148 0)
@@ -3149,9 +3163,22 @@
 		)
 		(uuid "f41aeddc-fa70-476d-ae1a-d1a92ef99d82")
 	)
+	(text "ERRATA 2025-04-01"
+		(exclude_from_sim no)
+		(at 158.496 145.796 0)
+		(effects
+			(font
+				(size 6 6)
+				(thickness 1.6)
+				(bold yes)
+				(color 255 0 0 1)
+			)
+			(justify left bottom)
+		)
+		(uuid "fb26f626-ce0c-495a-b816-dcfe0a74a9dd")
+	)
 	(label "SDA"
 		(at 32.385 64.77 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3162,7 +3189,6 @@
 	)
 	(label "GPIO1"
 		(at 32.385 67.31 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3173,7 +3199,6 @@
 	)
 	(label "SCL"
 		(at 32.385 87.63 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3184,7 +3209,6 @@
 	)
 	(label "POT2R"
 		(at 254 66.04 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3195,7 +3219,6 @@
 	)
 	(label "INT2"
 		(at 201.93 105.41 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3206,7 +3229,6 @@
 	)
 	(label "GPIO2"
 		(at 32.385 85.09 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3217,7 +3239,6 @@
 	)
 	(label "GPIO1"
 		(at 185.42 96.52 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3228,7 +3249,6 @@
 	)
 	(label "SCL"
 		(at 119.38 67.31 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3239,7 +3259,6 @@
 	)
 	(label "SDA"
 		(at 72.39 64.77 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3250,7 +3269,6 @@
 	)
 	(label "GPIO2"
 		(at 185.42 111.76 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3261,7 +3279,6 @@
 	)
 	(label "POT1L"
 		(at 223.52 66.04 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3272,7 +3289,6 @@
 	)
 	(label "SDA"
 		(at 119.38 64.77 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3283,7 +3299,6 @@
 	)
 	(label "SCL"
 		(at 72.39 67.31 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3294,7 +3309,6 @@
 	)
 	(label "INT1"
 		(at 195.58 90.17 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)

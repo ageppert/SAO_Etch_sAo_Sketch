@@ -6,6 +6,19 @@ This is the primary repository for all things relevant to the Etch sAo Sketch.
 
 Learn more about this project at: https://hackaday.io/project/197581-etch-sao-sketch
 
+IMPORTANT ERRATA APPLIES TO ALL VERSIONS:
+
+There is too much combined pull-up resistance with this board, the OLED board, the Hackaday Badge, and the Pico. This inhibits I2C hardware implementations from working with the OLED display.
+
+SOLUTION A: Firmware workaround is to use software I2C.
+
+   See: https://github.com/ageppert/SAO_Etch_sAo_Sketch/pull/1
+
+SOLUTION B: Hardware mods to remove interfering components.
+
+   See: https://github.com/ageppert/SAO_Etch_sAo_Sketch/issues/8
+
+
 -------------
 
 # V1.3 - OLED VERSION - Hackaday Europe 2025 Elecrow version
