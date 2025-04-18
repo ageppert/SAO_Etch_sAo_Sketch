@@ -1,0 +1,673 @@
+159900173375661
+Andy_Footprint_Library
+5-PIN-DIN-RA-PCB-NEW
+Updated 5-pin DIN commector (AKA MIDI).{return}{return}Updated to match parts as of May 2015. PROD_ID CONN=09481
+
+0
+7
+7
+Andy_Footprint_Library
+4960_ADA_REV_RGB_LED
+
+4960 
+0
+4
+4
+Andy_Footprint_Library
+4960_ADA_REV_RGB_LED_short_pads
+
+4960 
+0
+4
+4
+Andy_Footprint_Library
+ADAFRUIT_2829
+
+
+0
+32
+32
+Andy_Footprint_Library
+ALS-BH1730
+
+
+0
+7
+7
+Andy_Footprint_Library
+ALS-BH1730-backside
+
+
+0
+6
+6
+Andy_Footprint_Library
+ALS-REG_BD00IC0WHFV-GTR
+
+
+0
+6
+6
+Andy_Footprint_Library
+Adafruit_3.2_TFT_Dual_PinHeader_1x20_P2.54mm_Vertical_SMD_Pin1Left
+surface-mounted straight pin header, 1x20, 2.54mm pitch, single row, style 1 (pin 1 left)
+Surface mounted pin header SMD 1x20 2.54mm single row style1 pin1 left
+0
+32
+28
+Andy_Footprint_Library
+Badgelife-SAOv169-BADGE-2x3
+Through hole straight IDC box header, 2x03, 2.54mm pitch, double rows
+Through hole IDC box header THT 2x03 2.54mm double row
+0
+6
+6
+Andy_Footprint_Library
+Badgelife-SAOv169-BADGE-2x3-Edge-Connect-no-front-text
+Through hole straight IDC box header, 2x03, 2.54mm pitch, double rows
+Through hole IDC box header THT 2x03 2.54mm double row
+0
+12
+6
+Andy_Footprint_Library
+Badgelife-SAOv169-BADGE-2x3-Edge-Connect-no-front-text-shortened
+Through hole straight IDC box header, 2x03, 2.54mm pitch, double rows
+Through hole IDC box header THT 2x03 2.54mm double row
+0
+12
+6
+Andy_Footprint_Library
+Badgelife-SAOv169-BADGE-2x3-no-front-text
+Through hole straight IDC box header, 2x03, 2.54mm pitch, double rows
+Through hole IDC box header THT 2x03 2.54mm double row
+0
+6
+6
+Andy_Footprint_Library
+Badgelife-SAOv169-BADGE-2x3_partial
+Through hole straight IDC box header, 2x03, 2.54mm pitch, double rows
+Through hole IDC box header THT 2x03 2.54mm double row
+0
+6
+6
+Andy_Footprint_Library
+Badgelife-SAOv169-SAO-2x3
+Through hole straight IDC box header, 2x03, 2.54mm pitch, double rows
+Through hole IDC box header THT 2x03 2.54mm double row
+0
+6
+6
+Andy_Footprint_Library
+Button_Wurth_4343X10458XX
+<b>WS-TASU</b><br>3.5x4.7 mm side push SMD Tact Switch, 4 pins
+
+0
+4
+4
+Andy_Footprint_Library
+Core4_SAO_w_core_symbol
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core4_w_core_symbol
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core16_w_core_symbol
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64-M_-_+_S_Buttons
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64-M_-_+_S_Buttons_2
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64.io_w_core_symbol
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64.io_w_core_symbol2
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64.io_w_core_symbol3
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64.io_w_core_symbol_8mm_tall
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64.io_w_core_symbol_9mm_tall
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64.io_w_core_symbol_12mm_tall
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64_Logo
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64_Logo_9mm_tall
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64_QR_Link_MachineIdeas
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64_Symbol_Only
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64c_Logo
+
+
+0
+0
+0
+Andy_Footprint_Library
+Core64c_Logo_7mm
+
+
+0
+0
+0
+Andy_Footprint_Library
+Github_Link
+
+
+0
+0
+0
+Andy_Footprint_Library
+Github_Link_Large
+
+
+0
+0
+0
+Andy_Footprint_Library
+Github_Link_Small
+
+
+0
+0
+0
+Andy_Footprint_Library
+JST_SH_SM04B-SRSS-TB_1x04-1MP_P1.00mm_Horizontal_QWIIC
+JST SH series connector, SM04B-SRSS-TB (http://www.jst-mfg.com/product/pdf/eng/eSH.pdf), generated with kicad-footprint-generator
+connector JST SH horizontal
+0
+6
+5
+Andy_Footprint_Library
+KiCAD Symbol with copper
+
+
+0
+0
+0
+Andy_Footprint_Library
+LED_1206_3216Metric_RevMnt_Hole1.8x2.4mm_custom
+LED SMD 1206 (3216 Metric), reverse mount, square (rectangular) end terminal, IPC_7351 nominal, (Body size source: http://www.tortai-tech.com/upload/download/2011102023233369053.pdf), generated with kicad-footprint-generator
+diode reverse
+0
+2
+2
+Andy_Footprint_Library
+LED_Matrix_Header_3pin_0.9_holes
+
+pin header 3-pin
+0
+3
+3
+Andy_Footprint_Library
+LED_SK6812-E_4960_ADA
+
+4960 
+0
+4
+4
+Andy_Footprint_Library
+LED_WS2813_PLCC6_5.0x5.0mm_P1.4mm_Core64_Abg_Mod
+https://cdn-shop.adafruit.com/datasheets/WS2812.pdf
+LED RGB NeoPixel
+0
+6
+6
+Andy_Footprint_Library
+LED_WS2813_PLCC6_5.0x5.0mm_P1.6mm_Core64_Abg_Mod
+https://cdn-shop.adafruit.com/datasheets/WS2812.pdf
+LED RGB NeoPixel
+0
+6
+6
+Andy_Footprint_Library
+LGA-16_3x3x1mm_STM
+
+LIS3DHTR 
+0
+16
+16
+Andy_Footprint_Library
+LGA-16_3x3x1mm_STM-L
+
+LIS3DHTR 
+0
+16
+16
+Andy_Footprint_Library
+LGA-16_3x3x1mm_STM-M
+
+LIS3DHTR 
+0
+16
+16
+Andy_Footprint_Library
+LP3961EMP_SOT150P696X180-5N
+SOT150P696X180-5N
+Integrated Circuit
+0
+5
+5
+Andy_Footprint_Library
+LTR-329ALS-01
+
+
+0
+4
+4
+Andy_Footprint_Library
+MIKROE-971_1
+MIKROE-971
+Undefined or Miscellaneous
+0
+16
+16
+Andy_Footprint_Library
+Machine_Ideas_logo
+
+
+0
+0
+0
+Andy_Footprint_Library
+Micro_LiPo_Charger
+
+
+0
+8
+4
+Andy_Footprint_Library
+Micro_LiPo_Charger_CornerSMD
+
+
+0
+6
+4
+Andy_Footprint_Library
+Micro_LiPo_Charger_USB-C_CornerSMD
+
+
+0
+7
+5
+Andy_Footprint_Library
+NCP176AMX330TCG
+NCP176AMX330TCG-2
+Integrated Circuit
+0
+7
+7
+Andy_Footprint_Library
+Nunchuk-male
+https://belfuse.com/resources/drawings/stewartconnector/dr-stw-ss-74301-001-ss-74301-002-ss-74301-005.pdf
+RJ45 Vertical Shield LED Green Yellow
+0
+5
+5
+Andy_Footprint_Library
+OLED_1.50_128x128
+
+
+0
+8
+5
+Andy_Footprint_Library
+OLED_Header_4PIN
+4-pin CPU fan Through hole pin header, e.g. for Wieson part number 2366C888-007 Molex 47053-1000, Foxconn HF27040-M1, Tyco 1470947-1 or equivalent, see http://www.formfactors.org/developer%5Cspecs%5Crev1_2_public.pdf
+pin header 4-pin CPU fan
+0
+4
+4
+Andy_Footprint_Library
+OLED_Header_4PIN_2
+4-pin CPU fan Through hole pin header, e.g. for Wieson part number 2366C888-007 Molex 47053-1000, Foxconn HF27040-M1, Tyco 1470947-1 or equivalent, see http://www.formfactors.org/developer%5Cspecs%5Crev1_2_public.pdf
+pin header 4-pin CPU fan
+0
+4
+4
+Andy_Footprint_Library
+POT_RES3_91A_TTE
+
+91AR5KLF 
+0
+3
+3
+Andy_Footprint_Library
+POT_RK10J12E0A0A
+
+
+0
+7
+7
+Andy_Footprint_Library
+Pico_SC0915_Functional
+
+
+0
+53
+53
+Andy_Footprint_Library
+Pico_SC0915_Sequential
+
+
+0
+53
+53
+Andy_Footprint_Library
+Pico_SC0915_THRUHOLE_CUTOUTS
+
+
+0
+86
+43
+Andy_Footprint_Library
+Pico_W_SC0915
+
+
+0
+89
+43
+Andy_Footprint_Library
+PinHeader_1x20_P2.54mm_Vertical_SMD_and_TH_Pin1Right
+surface-mounted straight pin header, 1x16, 2.54mm pitch, single row, style 2 (pin 1 right)
+Surface mounted pin header SMD 1x16 2.54mm single row style2 pin1 right
+0
+40
+20
+Andy_Footprint_Library
+PinSocket_1x11_P2.54mm_Vertical
+Through hole straight socket strip, 1x11, 2.54mm pitch, single row (from Kicad 4.0.7), script generated
+Through hole socket strip THT 1x11 2.54mm single row
+0
+11
+11
+Andy_Footprint_Library
+PinSocket_1x12_P2.54mm_Horizontal_Overhang
+Through hole angled socket strip, 1x12, 2.54mm pitch, 8.51mm socket length, single row (from Kicad 4.0.7), script generated
+Through hole angled socket strip THT 1x12 2.54mm single row
+0
+12
+12
+Andy_Footprint_Library
+PinSocket_1x30_P2.54mm_Vertical
+Through hole straight socket strip, 1x30, 2.54mm pitch, single row (from Kicad 4.0.7), script generated
+Through hole socket strip THT 1x30 2.54mm single row
+0
+30
+30
+Andy_Footprint_Library
+ProtoBoard_0.1in_30x20_Grid_PTH_1x1.7mm
+wire loop as test point, pitch 2.54mm, hole diameter 1.0mm, wire diameter 0.8mm
+test point wire loop
+0
+300
+300
+Andy_Footprint_Library
+ProtoBoard_0.1in_Single_PTH_1x1.7mm
+wire loop as test point, pitch 2.54mm, hole diameter 1.0mm, wire diameter 0.8mm
+test point wire loop
+0
+1
+1
+Andy_Footprint_Library
+RP2040 Zero
+
+
+0
+46
+23
+Andy_Footprint_Library
+RPi_PicoW_SMD_TH
+Through hole straight pin header, 2x20, 2.54mm pitch, double rows
+Through hole pin header THT 2x20 2.54mm double row
+0
+83
+43
+Andy_Footprint_Library
+RPi_PicoW_SMD_TH_Abg
+Through hole straight pin header, 2x20, 2.54mm pitch, double rows
+Through hole pin header THT 2x20 2.54mm double row
+0
+83
+43
+Andy_Footprint_Library
+Rohm_RPR0521RS
+RPR-0521RS-2
+Integrated Circuit
+0
+8
+8
+Andy_Footprint_Library
+SMD4_SW_EVQP7J_PAN
+
+EVQ-P7J01P 
+0
+4
+4
+Andy_Footprint_Library
+SOIC-8_W3.9mm
+
+
+0
+8
+8
+Andy_Footprint_Library
+SOP65P640X110-16N
+
+
+0
+16
+16
+Andy_Footprint_Library
+Switch_SK12D07VG4
+
+
+0
+5
+5
+Andy_Footprint_Library
+TI_TS3A4751PWR
+
+
+0
+14
+14
+Andy_Footprint_Library
+TPS7A0533PDBVR_SOT95P280X145-5N
+TPS7A0533PDBVR-1
+Integrated Circuit
+0
+5
+5
+Andy_Footprint_Library
+TestPoint_THTPad_D1.5mm_Drill1.0mm
+THT pad as test Point, diameter 2.0mm, hole diameter 1.0mm
+test point THT pad
+0
+1
+1
+Andy_Footprint_Library
+Tooling_Hole_JLCPCB
+Mounting Hole 2.2mm, M2, ISO14580
+mounting hole 2.2mm m2 iso14580
+0
+1
+1
+Andy_Footprint_Library
+Trimpot_RES3_91A_TTE
+
+91AR5KLF 
+0
+3
+3
+Andy_Footprint_Library
+core_4_6.75mm_square_front_facing
+Core Memory 8x8 Array by Andy Geppert
+Core Memory 8x8 Array
+0
+18
+10
+Andy_Footprint_Library
+core_16_6.75mm_square_front_facing
+Core Memory 8x8 Array by Andy Geppert
+Core Memory 8x8 Array
+0
+26
+26
+Andy_Footprint_Library
+core_64
+Core Memory 8x8 Array by Andy Geppert
+Core Memory 8x8 Array
+0
+34
+34
+Andy_Footprint_Library
+core_64_0.3in_spacing_front_facing
+Core Memory 8x8 Array by Andy Geppert
+Core Memory 8x8 Array
+0
+34
+34
+Andy_Footprint_Library
+core_64_6.75mm_square_v0.5_front_facing
+Core Memory 8x8 Array by Andy Geppert
+Core Memory 8x8 Array
+0
+34
+34
+Andy_Footprint_Library
+core_64_x6.7_y6.5mm
+Core Memory 8x8 Array by Andy Geppert
+Core Memory 8x8 Array
+0
+34
+34
+Andy_Footprint_Library
+core_64_x6.7_y6.5mm_v0.3_front_facing
+Core Memory 8x8 Array by Andy Geppert
+Core Memory 8x8 Array
+0
+34
+34
+Andy_Footprint_Library
+mouse-bite-1mm-slot
+
+
+0
+0
+0
+Andy_Footprint_Library
+mouse-bite-2.54mm-slot
+
+
+0
+0
+0
+Andy_Footprint_Library
+mouse-bite-2mm-slot
+
+
+0
+0
+0
+Andy_Footprint_Library
+mouse-bite-3mm-slot
+
+
+0
+0
+0
+Andy_Footprint_Library
+mouse-bite-3mm-slot-5.5mm-long
+
+
+0
+0
+0
+Andy_Footprint_Library
+mouse-bite-3mm-slot-setback
+
+
+0
+0
+0
+Andy_Footprint_Library
+poka-yoke_rxtx
+
+
+0
+4
+4
