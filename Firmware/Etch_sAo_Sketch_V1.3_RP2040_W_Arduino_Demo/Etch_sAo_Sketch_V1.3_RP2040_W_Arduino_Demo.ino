@@ -1,8 +1,10 @@
-/* Etch sAo Sketch Demo with Arduino 
+/******************************************************************************************************************
+  Etch sAo Sketch (EAS) Demo code using RP2040 and the Arduino IDE
+
   Github repo: https://github.com/ageppert/SAO_Etch_sAo_Sketch
   Project page: https://hackaday.io/project/197581-etch-sao-sketch
 
-  DEPENDENCIES
+  DEPENDENCIES - FIRMWARE
     This demo will work with a huge range of IDEs and hardware, but it was developed and tested with the following:
     Arduino IDE 2.3.2 
       Install "Arduino Mbed OS RP2040 Boards" v4.2.2 with Arduino Boards Manager
@@ -14,6 +16,21 @@
         - Adafruit BusIO
         - Adafruit Unified Sensor
 
+  DEPENDENCIES - HARDWARE
+    OLED with SSD1327 Driver
+    Accelerometer LIS3DH
+    External user provided RP2040 MCU tested so far
+
+  CONFIGURE SAO DEMO CONTROLLER FOR ETCH SAO SKETCH HARDWARE V1.0
+    If you are using SAO Demo Controller V2 with EAS V1.0 you need to close solder jumper JP5&6 pads 2-3 so the
+    analog pots will be connected to GP26/ADC0 and GP27/ADC1 of the RP2040-Zero on the SAO Demo Controller. This enables
+    access to the full range of the potentiometers in EAS V1.0 which are configured for 0 to 3.3V ADC sensing.
+    Etch sAo Sketch V1.1+ can access full range pot control with the ADC in the accelerometer.
+
+  CONFIGURE THIS FIRMWARE TO WORK WITH CORRECT ETCH SAO SKETCH HARDWARE
+    See the ETCH SAO SKETCH - HARDWARE VERSION TABLE and hardware version setting variables immediately below it to compile
+    this firmware to work correctly with your specific Etch sAo Sketch board.
+
   HARDWARE CONNECTIONS
     OLED 1.5" 128x128 SSD1327: https://learn.adafruit.com/adafruit-grayscale-1-5-128x128-oled-display/arduino-wiring-and-test
     Accelerometer LIS3DH: https://learn.sparkfun.com/tutorials/lis3dh-hookup-guide and https://learn.adafruit.com/adafruit-lis3dh-triple-axis-accelerometer-breakout/arduino  
@@ -23,52 +40,67 @@
     SAO GPIO1 pin connected to the left Analog Potentiometer
     SAO GPIO2 pin connected to the right Analog Potentiometer
   
-  MODES
-  Startup with the boot screen. After timeout, automatcally go to sketching mode with default white background.
-  In sketch mode, rotate pots to draw.
-  Gestures active during sketch mode:
-  Upsidedown, shake left/right to clear sketch zone.
-  Rightsideup, shake left/right to change background color (also clears screen).
-  Rightsideup, shake up/down to change pot input between Arduino Analog port (0-3.3V) or accelerometer analog ports (0.8-1.6V).
-*/
+  MODES OF OPERATION
+    MODE_INIT
+      Connect to the serial port for status and debugging  
+    MODE_BOOT_SCREEN
+      Startup with the boot screen. Configured analog input source per hardware version specified beloe the HARDWARE VERSION TABLE.
+      After timeout, automatcally go to sketching mode with default black background.
+    MODE_SKETCH
+      In sketch mode, rotate pots to draw.
+      Gestures active during sketch mode:
+        Upsidedown, shake left/right to clear sketch zone.
+        Rightsideup, shake left/right to change background color (also clears screen).
+        Rightsideup, shake up/down to change pot input between Arduino Analog port (0-3.3V) or accelerometer analog ports (0.8-1.6V).
+    MODE_AT_THE_END_OF_TIME
+      I hope you never land in this mode!
 
-/************************************ ETCH SAO SKETCH - FIRMWARE VERSION TABLE ************************************
-| VERSION |  DATE      | MCU     | DESCRIPTION                                                                    |
--------------------------------------------------------------------------------------------------------------------
-|  1.0.0  | 2024-11-01 | RP2040  | First draft, hurry up for Supercon!
-|  1.1.0  | 2024-11-23 | RP2040  | Correct pot scaling for full range hardware mods with Accel ADC.
-|  1.3.0  | 2025-02-27 | RP2040  | 
-|         |            |         |
-|         |            |         |
------------------------------------------------------------------------------------------------------------------*/
+  /************************************ ETCH SAO SKETCH - FIRMWARE VERSION TABLE ************************************
+  | VERSION |  DATE      | MCU     | DESCRIPTION                                                                    |
+  -------------------------------------------------------------------------------------------------------------------
+  |  1.0.0  | 2024-11-01 | RP2040  | First draft, hurry up for Supercon!
+  |  1.1.0  | 2024-11-23 | RP2040  | Correct pot scaling for full range hardware mods with Accel ADC.
+  |  1.3.0  | 2025-04-12 | RP2040  | Clarify hardware versions and configurations. Supports all hardware versions.
+  |         |            |         |
+  |         |            |         |
+  -----------------------------------------------------------------------------------------------------------------*/
+  // TODO: Make this work with Hackaday Supercon 2024 and Berlin 2025 Badge I2C ports 4-5-6 on pins 31 CL / 32 DA GPIO 26/27. 
+  //        Ports 1-2-3 on pins 1 DA and 2 CL. GPIO 0/1
+    uint8_t FirmwareVersionMajor  = 1;
+    uint8_t FirmwareVersionMinor  = 3;
+    uint8_t FirmwareVersionPatch  = 0;
 
-/************************************ ETCH SAO SKETCH - HARDWARE VERSION TABLE ************************************
-| VERSION |  DATE      | MCU     | DESCRIPTION                                                                    |
--------------------------------------------------------------------------------------------------------------------
-|  1.0    | 2024-09-27 |         | First prototype, as built, getting it to come alive. Analog input range of pots
-|         |            |         |   is much wider than accelerometer analog inputs can handle. Recommend to use
-|         |            |         |   only with 3.3V capable analog inputs of host MCU through SAO pport GPIO1&2.
-|  1.1    | 2024-11-23 |         | V1.0.0 modified with resistors inline (10K highside and 4.8K lowside) with pots
-|         |            |         |   to enable full travel to map to accelerometer ADC 0.8 to 1.6V input range.
-|  1.2    | 2024-12-10 |         | RFQ only. Added resistors to scale pot voltage to range accelerometer accepts.
-|  1.3    | 2025-01-13 |         | Batch for Hackaday Europe with supplier name Elecrow on the front.
-|         |            |         |
-|         |            |         |
------------------------------------------------------------------------------------------------------------------*/
-
-// TODO: Make this work with Hackaday Supercon 2024 and Hackaday Berlin 2025 Badge I2C ports 4-5-6 on pins 31 CL / 32 DA GPIO 26/27. Ports 1-2-3 on pins 1 DA and 2 CL. GPIO 0/1
-
-#define HARDWARE_VERSION_MAJOR  1
-#define HARDWARE_VERSION_MINOR  3
-#define HARDWARE_VERSION_PATCH  0
-#define MCU_FAMILY              RP2040
+  /************************************ ETCH SAO SKETCH - HARDWARE VERSION TABLE ************************************
+  | VERSION |  DATE      |         | DESCRIPTION                                                                    |
+  -------------------------------------------------------------------------------------------------------------------
+  |  1.0    | 2024-09-27 |         | First prototype, as built, getting it to come alive. Analog input range of pots
+  |         |            |         |   is much wider than accelerometer analog inputs can handle. Recommend to use
+  |         |            |         |   only with 3.3V capable analog inputs of host MCU through SAO port GPIO1&2.
+  |  1.0.1  | 2025-04-14 |         | First prototype, without excess pull-up resistors R30 and R31 10K.
+  |  1.1    | 2024-11-23 |         | V1.0.0 modified with resistors inline (10K highside and 4.8K lowside) with the
+  |         |            |         |   pots to enable full travel to map to accelerometer ADC 0.8 to 1.6V input range.
+  |  1.2    | 2024-12-10 |         | RFQ only. Added resistors to scale pot voltage to range accelerometer accepts.
+  |  1.3    | 2025-01-13 |         | Batch for Hackaday Europe with supplier name Elecrow on the front. Some may be
+  |         |            |         |   updated with an additional clear Etch sAo Sketch sticker on the top as well.
+  |  1.3.1  | 2025-04-13 |         | Removed R1 and R2 to reduce the excessive pull-up resistance for wider MCU
+  |         |            |         |   compatibility.
+  |         |            |         |
+  |         |            |         |
+  -------------------------------------------------------------------------------------------------------------------
+  ************************************* Etch sAo Sketch Hardware Version Setting ************************************
+  This default mode of input from the analog pots (I2C Accelerometer ADC = 0 or Arduino/RP2040 ADCs = 1) 
+  will be set during MODE_BOOT_SCREEN...                                                                           */
+    bool    EASAnalogSource;
+  // ...based on the hardware version set in the following three lines.
+    uint8_t HardwareVersionMajor  = 1;
+    uint8_t HardwareVersionMinor  = 0;
+    uint8_t HardwareVersionPatch  = 1;
+/*******************************************************************************************************************/
 
 #include <Adafruit_SSD1327.h>
 #include <Fonts/FreeMono9pt7b.h>  // https://learn.adafruit.com/adafruit-gfx-graphics-library/using-fonts
 // #include <Wire.h>                             // RP2040 Pico-Zero default I2C port is GPIO4 (SDA0) and GPIO5 (SCL0).
                                               // RP2040 Pico W default I2C port is GPIO4 (SDA0) and GPIO5 (SCL0).
-
-
 #include <Adafruit_LIS3DH.h>
 #include <Adafruit_Sensor.h>
 
@@ -81,19 +113,18 @@
 #define OLED_BLACK                     0
 // MbedI2C i2c(p0,p1);
 Adafruit_SSD1327 display(OLED_HEIGHT, OLED_WIDTH, &Wire, OLED_RESET, 1000000);
-uint8_t color = OLED_WHITE;                   // 0-15 shades of gray
-uint16_t cursorX = 0;                          // 0-127 pixels
-uint16_t cursorY = 0;                          // 0-127 pixels
-uint16_t cursorXold = 0;                          // 0-127 pixels
-uint16_t cursorYold = 0;                          // 0-127 pixels
-bool    EASBackground = 0;                    // 0 = dark, 1 = white (default)
-bool    EASAnalogSource = 0;                  // 0 = accelerometer ADC, 1 = Arduino Analog Ports (default)
+uint8_t  color = OLED_WHITE;                        // 0-15 shades of gray
+uint16_t cursorX = 0;                               // 0-127 pixels
+uint16_t cursorY = 0;                               // 0-127 pixels
+uint16_t cursorXold = 0;                            // 0-127 pixels
+uint16_t cursorYold = 0;                            // 0-127 pixels
+bool     EASBackground = 0;                         // 0 = dark, 1 = white (default)
 
 #define ACCELEROMETER_ADDRESS       0x19      // LIS3DH Acceleromter default is 0x19
 Adafruit_LIS3DH lis = Adafruit_LIS3DH();
 
 #define PIN_SAO_GPIO_1_ANA_POT_LEFT   A0      // Configured as left analog pot
-#define PIN_SAO_GPIO_2_ANA_POT_RIGHT  A1      // Configured as left analog pot
+#define PIN_SAO_GPIO_2_ANA_POT_RIGHT  A1      // Configured as right analog pot
 uint16_t PotLeftADCCounts = 0;
 uint16_t PotRightADCCounts = 0;
 uint16_t PotLeftADCCountsOld = 0;
@@ -205,7 +236,7 @@ bool SerialInit() {
 
 bool OLEDInit() {
   Serial.print(">>> INIT OLED started... ");
-  if ( ! display.begin(0x3C) ) {
+  if ( ! display.begin(OLED_ADDRESS) ) {
      Serial.println("Unable to initialize OLED");
      return 1;
   }
@@ -454,10 +485,22 @@ void loop()
       AccelerometerInit();
       SAOGPIOPinInit();
       Serial.println("");
-      Serial.println("  |-------------------------------------------------------------------------------| ");
-      Serial.println("  | Welcome to the Etch sAo Sketch Demo with Arduino IDE 2.3.2 using RP2040-Zero! | ");
-      Serial.println("  |-------------------------------------------------------------------------------| ");
+      Serial.println("  |------------------------------------------------------------------------------------| ");
+      Serial.println("  | Welcome to the Etch sAo Sketch Demo made with Arduino IDE 2.3.2 using RP2040-Zero! | ");
+      Serial.println("  |------------------------------------------------------------------------------------| ");
       Serial.println("");
+      Serial.print("Hardware Version: ");
+      Serial.print(HardwareVersionMajor);
+      Serial.print(".");
+      Serial.print(HardwareVersionMinor );
+      Serial.print(".");
+      Serial.println(HardwareVersionPatch);
+      Serial.print("Firmware Version: ");
+      Serial.print(FirmwareVersionMajor);
+      Serial.print(".");
+      Serial.print(FirmwareVersionMinor );
+      Serial.print(".");
+      Serial.println(FirmwareVersionPatch);
       ModeTimeOutCheckReset(); 
       TopLevelMode = TopLevelModeDefault;
       Serial.println(">>> Leaving MODE_INIT.");
@@ -471,12 +514,11 @@ void loop()
       static uint32_t BlinkDeltaTime = 600;
 
       if (ModeTimeoutFirstTimeRun) { 
-        Serial.println(">>> Entered MODE_BOOT_SCREEN."); 
+        Serial.println(">>> Entered MODE_BOOT_SCREEN.");
+        OLEDClear();
+        display.display();
         // Border
         uint8_t BorderThickness = 12;
-        // display.fillRect(BorderThickness,BorderThickness,(display.width()-(2*BorderThickness)),(display.height()-(2*BorderThickness)),3);
-        // display.display();
-        // delay(1000);
         for (uint8_t i=0; i<BorderThickness; i+=1) {
           display.drawRect(i, i, display.width()-2*i, display.height()-2*i, OLED_WHITE);
         }
@@ -496,6 +538,15 @@ void loop()
         display.setCursor(12,40);
         display.println("Ready.");
         display.display();
+        // Configure analog input source based on hardware version.
+        // See comments at top of this file in ETCH SAO SKETCH - HARDWARE VERSION TABLE for expected input source
+        // 0 = accelerometer ADC, 1 = Arduino Analog Ports
+        if (HardwareVersionMajor == 1) {
+          if      (HardwareVersionMinor == 0) { EASAnalogSource = 1; }
+          else if (HardwareVersionMinor == 1) { EASAnalogSource = 0; }
+          else if (HardwareVersionMinor == 2) { EASAnalogSource = 0; }
+          else if (HardwareVersionMinor == 3) { EASAnalogSource = 0; }
+        }
       }
 
       // Is it time to blink?
@@ -508,7 +559,7 @@ void loop()
         display.display();
       }
 
-      if (ModeTimeOutCheck(1000)){ 
+      if (ModeTimeOutCheck(4000)){ 
         ModeTimeOutCheckReset();
         OLEDClear();
         TopLevelMode++; 
