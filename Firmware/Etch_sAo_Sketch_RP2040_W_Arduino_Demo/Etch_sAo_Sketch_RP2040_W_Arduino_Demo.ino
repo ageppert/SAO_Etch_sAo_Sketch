@@ -61,14 +61,16 @@
   |  1.0.0  | 2024-11-01 | RP2040  | First draft, hurry up for Supercon!
   |  1.1.0  | 2024-11-23 | RP2040  | Correct pot scaling for full range hardware mods with Accel ADC.
   |  1.3.0  | 2025-04-12 | RP2040  | Clarify hardware versions and configurations. Supports all hardware versions.
-  |         |            |         |
-  |         |            |         |
+  |  1.3.1  | 2025-04-18 | RP2040  | Fix and improve shake side-to-side (upside down or right side up) to erase,
+  |         |            |         |   disable screen inversion and pot input select gestures. Add LOAD and RUN, 
+  |         |            |         |   and display firmware/hardware versions.
+  |         |            |         | 
   -----------------------------------------------------------------------------------------------------------------*/
   // TODO: Make this work with Hackaday Supercon 2024 and Berlin 2025 Badge I2C ports 4-5-6 on pins 31 CL / 32 DA GPIO 26/27. 
   //        Ports 1-2-3 on pins 1 DA and 2 CL. GPIO 0/1
-    uint8_t FirmwareVersionMajor  = 1;
-    uint8_t FirmwareVersionMinor  = 3;
-    uint8_t FirmwareVersionPatch  = 0;
+    static uint8_t FirmwareVersionMajor  = 1;
+    static uint8_t FirmwareVersionMinor  = 3;
+    static uint8_t FirmwareVersionPatch  = 1;
 
   /************************************ ETCH SAO SKETCH - HARDWARE VERSION TABLE ************************************
   | VERSION |  DATE      |         | DESCRIPTION                                                                    |
@@ -90,11 +92,11 @@
   ************************************* Etch sAo Sketch Hardware Version Setting ************************************
   This default mode of input from the analog pots (I2C Accelerometer ADC = 0 or Arduino/RP2040 ADCs = 1) 
   will be set during MODE_BOOT_SCREEN...                                                                           */
-    bool    EASAnalogSource;
+    static bool    EASAnalogSource;
   // ...based on the hardware version set in the following three lines.
-    uint8_t HardwareVersionMajor  = 1;
-    uint8_t HardwareVersionMinor  = 0;
-    uint8_t HardwareVersionPatch  = 1;
+    static uint8_t HardwareVersionMajor  = 1;
+    static uint8_t HardwareVersionMinor  = 0;
+    static uint8_t HardwareVersionPatch  = 1;
 /*******************************************************************************************************************/
 
 #include <Adafruit_SSD1327.h>
@@ -103,6 +105,10 @@
                                               // RP2040 Pico W default I2C port is GPIO4 (SDA0) and GPIO5 (SCL0).
 #include <Adafruit_LIS3DH.h>
 #include <Adafruit_Sensor.h>
+
+// #define DEBUG_SHAKE
+// #define DEBUG_CURSOR
+// #define DEBUG_ADC
 
 #define OLED_ADDRESS                0x3C      // OLED SSD1327 is 0x3C
 #define OLED_RESET                    -1
@@ -113,12 +119,22 @@
 #define OLED_BLACK                     0
 // MbedI2C i2c(p0,p1);
 Adafruit_SSD1327 display(OLED_HEIGHT, OLED_WIDTH, &Wire, OLED_RESET, 1000000);
-uint8_t  color = OLED_WHITE;                        // 0-15 shades of gray
-uint16_t cursorX = 0;                               // 0-127 pixels
-uint16_t cursorY = 0;                               // 0-127 pixels
-uint16_t cursorXold = 0;                            // 0-127 pixels
-uint16_t cursorYold = 0;                            // 0-127 pixels
-bool     EASBackground = 0;                         // 0 = dark, 1 = white (default)
+static uint8_t  color = OLED_WHITE;                        // 0-15 shades of gray
+static uint16_t cursorX = 0;                               // 0-127 pixels
+static uint16_t cursorY = 0;                               // 0-127 pixels
+static uint16_t cursorXold = 0;                            // 0-127 pixels
+static uint16_t cursorYold = 0;                            // 0-127 pixels
+static bool     EASBackground = 0;                         // 0 = dark, 1 = white (default)
+static uint8_t  CursorPosXLeft = 13;
+static uint8_t  CursorPosX = CursorPosXLeft;
+static uint8_t  CursorPosY = 0;
+static uint8_t  CursorHeight = 7;
+static uint8_t  CursorWidth =  6;
+static uint8_t  CursorNewLine = 8;
+static bool     CursorState = 0;
+static uint32_t NowTime;
+static uint32_t LastTime;
+static uint32_t BlinkDeltaTime = 600;
 
 #define ACCELEROMETER_ADDRESS       0x19      // LIS3DH Acceleromter default is 0x19
 Adafruit_LIS3DH lis = Adafruit_LIS3DH();
@@ -145,6 +161,9 @@ enum TopLevelMode                             // Top Level Mode State Machine
 {
   MODE_INIT,
   MODE_BOOT_SCREEN,
+  MODE_LOAD,
+  MODE_LOADING,
+  MODE_RUN,
   MODE_SKETCH,
   MODE_AT_THE_END_OF_TIME
 } ;
@@ -158,63 +177,63 @@ class EmaFilterWithPriming
 // with minimal round-off error, noticeable lag with the double precision calcs
 // Alpha (0 to 1) is cut-off frequency, lower number is more filtering
 {
-public:
-    EmaFilterWithPriming(double alpha) :
-        m_alpha(alpha), m_lastOutput(0.0), m_firstRun(true) {}
+  public:
+      EmaFilterWithPriming(double alpha) :
+          m_alpha(alpha), m_lastOutput(0.0), m_firstRun(true) {}
 
-    double Run(double input)
-    {
-        if (m_firstRun)
-        {
-            m_firstRun = false;
-            m_lastOutput = input; // Bypass filter and prime with input
-        }
-        else
-        {
-            m_lastOutput = m_alpha * input + (1 - m_alpha) * m_lastOutput;
-        }
-        return m_lastOutput;
-    }
-private:
-    double m_alpha;
-    double m_lastOutput;
-    bool m_firstRun;
+      double Run(double input)
+      {
+          if (m_firstRun)
+          {
+              m_firstRun = false;
+              m_lastOutput = input; // Bypass filter and prime with input
+          }
+          else
+          {
+              m_lastOutput = m_alpha * input + (1 - m_alpha) * m_lastOutput;
+          }
+          return m_lastOutput;
+      }
+  private:
+      double m_alpha;
+      double m_lastOutput;
+      bool m_firstRun;
+  };
+  EmaFilterWithPriming emaFilterX(0.1);
+  EmaFilterWithPriming emaFilterY(0.1);
+
+  // TODO: IMPLEMENT THE BIT SHIFT IIR THAT WORKS TO THE POLES
+  class IIRFilterWithIntegers
+  // from https://electronics.stackexchange.com/questions/30370/fast-and-memory-efficient-moving-average-calculation
+  // and https://forum.arduino.cc/t/understanding-some-code/499217 
+  // with round-off error, but very fast with bit shifting
+  // where alpha = 1 / 2^BITFILTER
+  {
+  public:
+      IIRFilterWithIntegers(double alpha) :
+          m_alpha(alpha), m_lastOutput(0.0), m_firstRun(true) {}
+
+      double Run(double input)
+      {
+          if (m_firstRun)
+          {
+              m_firstRun = false;
+              m_lastOutput = input; // Bypass filter and prime with input
+          }
+          else
+          {
+              m_lastOutput = m_alpha * input + (1 - m_alpha) * m_lastOutput;
+          }
+          return m_lastOutput;
+      }
+  private:
+      double m_alpha;
+      double m_lastOutput;
+      bool m_firstRun;
 };
-EmaFilterWithPriming emaFilterX(0.1);
-EmaFilterWithPriming emaFilterY(0.1);
 
-// TODO: IMPLEMENT THE BIT SHIFT IIR THAT WORKS TO THE POLES
-class IIRFilterWithIntegers
-// from https://electronics.stackexchange.com/questions/30370/fast-and-memory-efficient-moving-average-calculation
-// and https://forum.arduino.cc/t/understanding-some-code/499217 
-// with round-off error, but very fast with bit shifting
-// where alpha = 1 / 2^BITFILTER
-{
-public:
-    IIRFilterWithIntegers(double alpha) :
-        m_alpha(alpha), m_lastOutput(0.0), m_firstRun(true) {}
-
-    double Run(double input)
-    {
-        if (m_firstRun)
-        {
-            m_firstRun = false;
-            m_lastOutput = input; // Bypass filter and prime with input
-        }
-        else
-        {
-            m_lastOutput = m_alpha * input + (1 - m_alpha) * m_lastOutput;
-        }
-        return m_lastOutput;
-    }
-private:
-    double m_alpha;
-    double m_lastOutput;
-    bool m_firstRun;
-};
 IIRFilterWithIntegers IIRFilterX(0.1);
 IIRFilterWithIntegers IIRFilterY(0.1);
-
 
 void setup()
 {
@@ -314,22 +333,29 @@ bool AccelerometerSenseGestureErase() {
   bool UpSideDown;
   bool ShakeLeft;
   bool ShakeRight;
+  bool ShakeInProgress;
   static uint16_t ShakeLeftCount;
   static uint16_t ShakeRightCount;
   static uint16_t ShakeSensitivyThreshold = 10000;
-  static uint16_t ShakeCountThreshold = 30;
+  static uint16_t ShakeCountThreshold = 100;
+  static uint32_t ShakeTimeout = 1000; // Window of time that shaking must be active to clear the screen
+  static uint32_t ShakeTimeNow;
+  static uint32_t ShakeTimeLast = 0;
+  ShakeTimeNow = millis();
   AccelerometerReadAccel();
   // Is it up-side-down?
-  if (lis.z > 10000) { UpSideDown = true;  }
-  else               { UpSideDown = false; }
+  // if (lis.z > 10000) { UpSideDown = true;  }
+  // else               { UpSideDown = false; }
   // Check for Left shake
-  if (lis.y > ShakeSensitivyThreshold) { ShakeLeft = true;  }
+  if (lis.y > ShakeSensitivyThreshold) { ShakeLeft = true; ShakeTimeLast = ShakeTimeNow; }
   else               { ShakeLeft = false; }
   // Check for Right shake
-  if (lis.y < -ShakeSensitivyThreshold) { ShakeRight = true;  }
+  if (lis.y < -ShakeSensitivyThreshold) { ShakeRight = true; ShakeTimeLast = ShakeTimeNow; }
   else                { ShakeRight = false; }
-  // If it is up-side-down...
-  if (UpSideDown) {
+  if ((ShakeTimeNow - ShakeTimeLast) < ShakeTimeout) {ShakeInProgress = true;}
+  else {ShakeInProgress = false;}
+  // If it is actively being shaken...
+  if (ShakeInProgress) {
     // ...Accumulate left/right shakes...
     if (ShakeLeft) { ShakeLeftCount++; }
     if (ShakeRight) { ShakeRightCount++; }
@@ -339,15 +365,17 @@ bool AccelerometerSenseGestureErase() {
     ShakeLeftCount = 0;
     ShakeRightCount = 0;
   }
-  // Serial.print(ShakeLeftCount);
-  // Serial.print(", ");
-  // Serial.println(ShakeRightCount);
+  #ifdef DEBUG_SHAKE
+    Serial.print(ShakeLeftCount);
+    Serial.print(", ");
+    Serial.println(ShakeRightCount);
+  #endif
   // If all conditions are met, signal screen clearing.
   if ((ShakeLeftCount > ShakeCountThreshold) && (ShakeRightCount > ShakeCountThreshold)) {
     ShakeLeftCount = 0;
     ShakeRightCount = 0;
-    return 1;
     OLEDBackgroundReset();
+    return 1;
   }
   else { return 0; }
 }
@@ -471,12 +499,29 @@ bool ModeTimeOutCheck (uint32_t ModeTimeoutLimitms) {
   }
 }
 
+void CursorBlink() {
+  // Is it time to blink?
+  NowTime = millis();
+  if ( (NowTime-LastTime) > BlinkDeltaTime) {
+    // Blink the cursor
+    LastTime = NowTime;
+    if (CursorState) { display.fillRect(CursorPosX,CursorPosY,CursorWidth,CursorHeight,SSD1327_WHITE); CursorState = 0;}
+    else { display.fillRect(CursorPosX,CursorPosY,CursorWidth,CursorHeight,SSD1327_BLACK);  CursorState = 1;}
+    display.display();
+  }
+}
+
+void CursorErase() {
+  display.fillRect(CursorPosX,CursorPosY,CursorWidth,CursorHeight,SSD1327_BLACK);
+  CursorState = 1;
+  display.display();
+}
+
 // -------------------------------------------------------------------------------------------
 // MAIN LOOP STARTS HERE
 // -------------------------------------------------------------------------------------------
 void loop()
 {
-
   switch(TopLevelMode) {
     case MODE_INIT: {
       SerialInit();
@@ -508,17 +553,13 @@ void loop()
     }
 
     case MODE_BOOT_SCREEN: {
-      static bool CursorState = 0;
-      static uint32_t NowTime;
-      static uint32_t LastTime;
-      static uint32_t BlinkDeltaTime = 600;
-
-      if (ModeTimeoutFirstTimeRun) { 
+      if (ModeTimeoutFirstTimeRun) {
+        ModeTimeoutFirstTimeRun = false;
         Serial.println(">>> Entered MODE_BOOT_SCREEN.");
         OLEDClear();
         display.display();
         // Border
-        uint8_t BorderThickness = 12;
+        uint8_t BorderThickness = 11;
         for (uint8_t i=0; i<BorderThickness; i+=1) {
           display.drawRect(i, i, display.width()-2*i, display.height()-2*i, OLED_WHITE);
         }
@@ -533,11 +574,34 @@ void loop()
         display.setTextSize(1);
         // display.cp437(true);
         display.setTextColor(SSD1327_WHITE);
-        display.setCursor(20,20);
-        display.println("128 Bytes Free");
-        display.setCursor(12,40);
-        display.println("Ready.");
+        CursorPosX = CursorPosXLeft;
+        CursorPosY = CursorPosY + CursorNewLine + CursorNewLine;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.print(" ETCH sAo SKETCH");
         display.display();
+        CursorPosX = CursorPosXLeft;
+        CursorPosY = CursorPosY + CursorNewLine;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.print("    HWV ");
+        display.print(HardwareVersionMajor);
+        display.print(".");
+        display.print(HardwareVersionMinor);
+        display.print(".");
+        display.print(HardwareVersionPatch);
+        display.display();
+        CursorPosX = CursorPosXLeft;
+        CursorPosY = CursorPosY + CursorNewLine;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.print("  64 BYTES FREE");
+        display.display();
+        CursorPosX = CursorPosXLeft;
+        CursorPosY = CursorPosY + CursorNewLine + CursorNewLine;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.print("READY.");
+        display.display();
+        CursorPosX = CursorPosXLeft;
+        CursorPosY = CursorPosY + CursorNewLine;
+        display.setCursor(CursorPosX,CursorPosY);
         // Configure analog input source based on hardware version.
         // See comments at top of this file in ETCH SAO SKETCH - HARDWARE VERSION TABLE for expected input source
         // 0 = accelerometer ADC, 1 = Arduino Analog Ports
@@ -547,28 +611,183 @@ void loop()
           else if (HardwareVersionMinor == 2) { EASAnalogSource = 0; }
           else if (HardwareVersionMinor == 3) { EASAnalogSource = 0; }
         }
-      }
-
-      // Is it time to blink?
-      NowTime = millis();
-      if ( (NowTime-LastTime) > BlinkDeltaTime) {
-        // Blink the cursor
-        LastTime = NowTime;
-        if (CursorState) { display.fillRect(12,47,8,10,SSD1327_WHITE); CursorState = 0;}
-        else { display.fillRect(12,47,8,10,SSD1327_BLACK);  CursorState = 1;}
-        display.display();
-      }
-
-      if (ModeTimeOutCheck(4000)){ 
         ModeTimeOutCheckReset();
-        OLEDClear();
-        TopLevelMode++; 
+      }
+      CursorBlink();
+      if (ModeTimeOutCheck(1500)){ 
+        ModeTimeOutCheckReset();
+        CursorErase();
+        TopLevelMode++;
+        ModeTimeoutFirstTimeRun = true;
         Serial.println(">>> Leaving MODE_BOOT_SCREEN.");
       }
       break;
     }
 
+    case MODE_LOAD: {
+      if (ModeTimeoutFirstTimeRun) {
+        ModeTimeoutFirstTimeRun = false;
+        Serial.println(">>> Entered MODE_LOAD.");
+        display.println("L");
+        display.display();
+        delay(200);
+        CursorPosX = CursorPosX + 6;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("O");
+        display.display();
+        delay(200);
+        CursorPosX = CursorPosX + 6;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("A");
+        display.display();
+        delay(200);
+        CursorPosX = CursorPosX + 6;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("D");
+        display.display();
+        delay(200);
+        ModeTimeOutCheckReset();
+        CursorPosX = CursorPosX + 6;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("\"");
+        display.display();
+        delay(200);
+        ModeTimeOutCheckReset();
+        CursorPosX = CursorPosX + 6;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("S");
+        display.display();
+        delay(200);
+        ModeTimeOutCheckReset();
+        CursorPosX = CursorPosX + 6;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("K");
+        display.display();
+        delay(200);
+        ModeTimeOutCheckReset();
+        CursorPosX = CursorPosX + 6;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("E");
+        display.display();
+        delay(200);
+        ModeTimeOutCheckReset();
+        CursorPosX = CursorPosX + 6;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("T");
+        display.display();
+        delay(200);
+        ModeTimeOutCheckReset();
+        CursorPosX = CursorPosX + 6;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("C");
+        display.display();
+        delay(200);
+        ModeTimeOutCheckReset();
+        CursorPosX = CursorPosX + 6;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("H");
+        display.display();
+        delay(200);
+        ModeTimeOutCheckReset();
+        CursorPosX = CursorPosX + 6;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("\"");
+        display.display();
+        delay(200);
+        ModeTimeOutCheckReset();
+        CursorPosX = CursorPosX + 6;
+      }
+      CursorBlink();
+      if (ModeTimeOutCheck(800)){ 
+        ModeTimeOutCheckReset();
+        CursorErase();
+        TopLevelMode++;
+        ModeTimeoutFirstTimeRun = true;
+        Serial.println(">>> Leaving MODE_LOAD.");
+      }
+      break;
+    }
+
+    case MODE_LOADING: {
+      if (ModeTimeoutFirstTimeRun) { 
+        ModeTimeoutFirstTimeRun = false;
+        Serial.println(">>> Entered MODE_LOADING.");
+        CursorPosX = CursorPosXLeft;
+        CursorPosY = CursorPosY + CursorNewLine;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("PRESS PLAY.");
+        display.display();
+        delay(1000);
+        CursorPosX = CursorPosXLeft;
+        CursorPosY = CursorPosY + CursorNewLine;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("LOADING SIDE B...");
+        display.display();
+        ModeTimeOutCheckReset();
+      }
+
+      if (ModeTimeOutCheck(3000)){ 
+        ModeTimeOutCheckReset();
+        TopLevelMode++;
+        ModeTimeoutFirstTimeRun = true;
+        Serial.println(">>> Leaving MODE_LOADING.");
+      }
+      break;
+    }
+
+    case MODE_RUN: {
+      if (ModeTimeoutFirstTimeRun) {
+        ModeTimeoutFirstTimeRun = false;
+        Serial.println(">>> Entered MODE_RUN.");
+        CursorPosX = CursorPosXLeft;
+        CursorPosY = CursorPosY + CursorNewLine;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.print(" (FWV ");
+        display.print(FirmwareVersionMajor);
+        display.print(".");
+        display.print(FirmwareVersionMinor);
+        display.print(".");
+        display.print(FirmwareVersionPatch);
+        display.print(")");
+        display.display();
+        CursorPosX = CursorPosXLeft;
+        CursorPosY = CursorPosY + CursorNewLine + CursorNewLine;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("READY.");
+        display.display();
+        delay(800);
+        CursorPosX = CursorPosXLeft;
+        CursorPosY = CursorPosY + CursorNewLine;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("R");
+        display.display();
+        delay(200);
+        CursorPosX = CursorPosX + 6;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("U");
+        display.display();
+        delay(200);
+        CursorPosX = CursorPosX + 6;
+        display.setCursor(CursorPosX,CursorPosY);
+        display.println("N");
+        display.display();
+        CursorPosX = CursorPosX + 6;
+        ModeTimeOutCheckReset();
+      }
+      CursorBlink();
+      if (ModeTimeOutCheck(1000)){ 
+        ModeTimeOutCheckReset();
+        TopLevelMode++;
+        CursorErase();
+        ModeTimeoutFirstTimeRun = true;
+        Serial.println(">>> Leaving MODE_RUN.");
+      }
+      break;
+    }
+
     case MODE_SKETCH: {
+      int16_t adc;
+      uint16_t volt;
       if (ModeTimeoutFirstTimeRun) { 
         Serial.println(">>> Entered MODE_SKETCH.");
         OLEDBackgroundReset();
@@ -581,29 +800,39 @@ void loop()
         PotLeftADCCounts = analogRead(PIN_SAO_GPIO_1_ANA_POT_LEFT);
         PotRightADCCounts = analogRead(PIN_SAO_GPIO_2_ANA_POT_RIGHT);
         // Scale ADC counts to the useable screen with margins at end of pot travel.
-        cursorX = map(PotLeftADCCounts , (1023-PotMarginAtLimit), PotMarginAtLimit, 0, 127);
-        cursorY = map(PotRightADCCounts, PotMarginAtLimit, (1023-PotMarginAtLimit), 0, 127);
+        cursorX = map(PotLeftADCCounts , (1023-PotMarginAtLimit), PotMarginAtLimit, 0, 126);
+        cursorY = map(PotRightADCCounts, PotMarginAtLimit, (1023-PotMarginAtLimit), 0, 126);
       }
       else {
         // Accelerometer Analog Reading (LIS3DH Analog reading is partial scale, limited between 0.9 and 1.8V)
         // Also scale these readings up to what Arduino ADC uses, so the rest of the processing code below doesn't need to change.
-        int16_t adc;
-        uint16_t volt;
         adc = lis.readADC(1);
         // volt = map(adc, -32512, 32512, 1400, 900);
         volt = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, AccelADCRangeHighmV, AccelADCRangeLowmV);
-        // Serial.print("ADC1:\t"); Serial.print(adc); 
-        // Serial.print(" ("); Serial.print(volt); Serial.print(" mV)  ");
+        #ifdef DEBUG_ADC
+          Serial.print("ADC1-L:\t"); Serial.print(adc); 
+          Serial.print(" ("); Serial.print(volt); Serial.print(" mV)  ");
+        #endif
         // PotLeftADCCounts = map(adc, -32512, 32512, 1023, 0);
-        cursorX = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, 0, 127);
+        cursorX = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, 0, 126);
         adc = lis.readADC(2);
         // volt = map(adc, -32512, 32512, 1400, 900);
         volt = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, AccelADCRangeHighmV, AccelADCRangeLowmV);
-        // Serial.print("ADC2:\t"); Serial.print(adc); 
-        // Serial.print(" ("); Serial.print(volt); Serial.print(" mV)  ");
+        #ifdef DEBUG_ADC
+          Serial.print("ADC2-R:\t"); Serial.print(adc); 
+          Serial.print(" ("); Serial.print(volt); Serial.print(" mV)  ");
+        #endif
         // PotRightADCCounts = map(adc, -32512, 32512, 1023, 0);
-        cursorY = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, 127, 0);
+        cursorY = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, 126, 0);
       }
+      adc = lis.readADC(3);
+      volt = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, AccelADCRangeHighmV, AccelADCRangeLowmV);
+      #ifdef DEBUG_ADC
+        Serial.print("ADC3-?:\t"); Serial.print(adc); 
+        Serial.print(" ("); Serial.print(volt); Serial.print(" mV)  ");
+        Serial.println();
+      #endif
+
       // Glitch rejection
       if (cursorX > 130) { cursorX = 0;}
       if (cursorY > 130) { cursorY = 0;}
@@ -710,11 +939,12 @@ void loop()
       PotRightADCCountsOld = PotRightADCCounts;
       cursorXold = cursorX;
       cursorYold = cursorY;
-      Serial.print("Cursor position: ");
-      Serial.print(cursorX);
-      Serial.print(",");
-      Serial.println(cursorY);
-
+      #ifdef DEBUG_CURSOR
+        Serial.print("Cursor position: ");
+        Serial.print(cursorX);
+        Serial.print(",");
+        Serial.println(cursorY);
+      #endif
       // Update the display
       if (EASBackground) { display.drawRect(cursorX, cursorY, 2, 2, OLED_BLACK); }
       else { display.drawRect(cursorX, cursorY, 2, 2, OLED_WHITE); }
@@ -724,6 +954,7 @@ void loop()
       if (AccelerometerSenseGestureErase()) { 
         OLEDBackgroundReset(); 
         }
+      /* Disable these modes in V1.3.1
       if (AccelerometerSenseGestureChangeBackground()) {
         if (EASBackground) { 
           EASBackground = 0;
@@ -738,6 +969,7 @@ void loop()
         if (EASAnalogSource) { EASAnalogSource = 0;  }
         else                 { EASAnalogSource = 1; }
         }
+      */
       break;
     }
 
