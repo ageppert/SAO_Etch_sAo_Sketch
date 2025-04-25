@@ -6,6 +6,8 @@ This is the primary repository for all things relevant to the Etch sAo Sketch.
 
 Learn more about this project at: https://hackaday.io/project/197581-etch-sao-sketch
 
+If you use the Arduino Demo code make sure it is configured for your hardware version (HWV) of the Etch sAo Sketch.
+
 IMPORTANT ERRATA APPLIES TO ALL VERSIONS:
 
 There is too much combined pull-up resistance with this board, the OLED board, the Hackaday Badge, and the Pico. This inhibits I2C hardware implementations from working with the OLED display.
@@ -35,12 +37,14 @@ This version was an un-fabricated step in the development for Hackaday Europe 20
 
 -------------
 
-# V1.1 - OLED VERSION - Small batch to sell on Tindie after V1.0 stock is depleted
+# V1.1 - OLED VERSION - Small batch to sell on Tindie
 
 Refinements include:
 1) Enable full range of the analog pots via the accelerometer's [reduced range] ADC inputs, with the option to still use analog signals on GPIO 1 and 2.
 2) Use a taller male SAO header for easier connection to the main (red) PCBA.
 3) Tweak alignment hole size/position for the alignment spheres and OLED position.
+
+V1.1.1 FIXES: Removed I2C Pull-up Resistors R1/2 from the board.
 
 Otherwise, it looks and functions just like V1.0.
 
@@ -51,6 +55,8 @@ Otherwise, it looks and functions just like V1.0.
 <img src="Images/Etch sAo Sketch Thumbnail crop center.jpeg" height="300">
 
 This version was shared at Hackaday Supercon.8 2024. It is available for purchase here: https://www.tindie.com/products/36383/
+
+V1.0.1 FIXES: Removed I2C Pull-up Resistors R30/31 from the board.
 
 V1.0 ERRATA: The full travel of the analog pots is only available through [analog] GPIO1&2 of the SAO port, and this works best when connected to analog pins of an MCU. My SAO DEMO CONTROLLER is a good host to use the V1.0 Etch sAo Sketch with. A reduced range of travel is available through the accelerometer ADC inputs via I2C. The included SAO Header pins need to be pushed back into the header body 1 mm so they extend far enough to be connected to the red PCBA after the OLED PCBA is stacked on the bottom.
 
