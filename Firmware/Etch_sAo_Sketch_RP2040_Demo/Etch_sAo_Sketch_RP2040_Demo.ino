@@ -65,13 +65,14 @@
   |         |            |         |   disable screen inversion and pot input select gestures. Add LOAD and RUN, 
   |         |            |         |   and display firmware/hardware versions.
   |  1.3.2  | 2025-04-25 | RP2040  | Fix glitching wrap-around at ends by bounding ADC count reading with HWV1.3.
+  |  1.3.3  | 2025-04-25 | RP2040  | Tighten ADC left/bottom range to ensure drawing to edges of screen with HWV1.1+.
   |         |            |         | 
   -----------------------------------------------------------------------------------------------------------------*/
   // TODO: Make this work with Hackaday Supercon 2024 and Berlin 2025 Badge I2C ports 4-5-6 on pins 31 CL / 32 DA GPIO 26/27. 
   //        Ports 1-2-3 on pins 1 DA and 2 CL. GPIO 0/1
     static uint8_t FirmwareVersionMajor  = 1;
     static uint8_t FirmwareVersionMinor  = 3;
-    static uint8_t FirmwareVersionPatch  = 2;
+    static uint8_t FirmwareVersionPatch  = 3;
 
   /************************************ ETCH SAO SKETCH - HWV (HARDWARE VERSION) TABLE ******************************
   | VERSION |  DATE      |         | DESCRIPTION                                                                    |
@@ -113,7 +114,7 @@
 
 // #define DEBUG_SHAKE
 // #define DEBUG_CURSOR
-#define DEBUG_ADC
+// #define DEBUG_ADC
 
 #define OLED_ADDRESS                0x3C      // OLED SSD1327 is 0x3C
 #define OLED_RESET                    -1
@@ -156,7 +157,7 @@ uint16_t PotMarginAtLimit = 10;
 // uint16_t PotFilterSampleCount = 3;
 // uint16_t deltaAbsolute = 0;
 // uint16_t CursorHystersisLimit = 4;
-int16_t AccelADCRangeLowCounts  = -4000;      // Tested with 3.3V supply voltage, R5 10K, R6 4K7
+int16_t AccelADCRangeLowCounts  = -1500;      // Tested with 3.3V supply voltage, R5 10K, R6 4K7
                                               // FWV V1.3 
 int16_t AccelADCRangeHighCounts = 32512;
 int16_t AccelADCRangeLowmV      =   900;      // FWV V1.3 
@@ -798,11 +799,11 @@ void loop()
         ModeTimeoutFirstTimeRun = false;
       }
       
+      // Arduino Analog Reading (Arduino with RP2040 allows 0-3.3V, full-scale reading with 10-bit resolution, 0-1023 )
+      PotLeftADCCounts = analogRead(PIN_SAO_GPIO_1_ANA_POT_LEFT);
+      PotRightADCCounts = analogRead(PIN_SAO_GPIO_2_ANA_POT_RIGHT);
       // Get analog readings of the two pots
       if (EASAnalogSource) {
-        // Arduino Analog Reading (Arduino with RP2040 allows 0-3.3V, full-scale reading with 10-bit resolution, 0-1023 )
-        PotLeftADCCounts = analogRead(PIN_SAO_GPIO_1_ANA_POT_LEFT);
-        PotRightADCCounts = analogRead(PIN_SAO_GPIO_2_ANA_POT_RIGHT);
         // Scale ADC counts to the useable screen with margins at end of pot travel.
         cursorX = map(PotLeftADCCounts , (1023-PotMarginAtLimit), PotMarginAtLimit, 0, 126);
         cursorY = map(PotRightADCCounts, PotMarginAtLimit, (1023-PotMarginAtLimit), 0, 126);

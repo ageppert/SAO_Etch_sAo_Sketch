@@ -10,16 +10,11 @@ If you use the Arduino Demo code make sure it is configured for your hardware ve
 
 IMPORTANT ERRATA APPLIES TO ALL VERSIONS:
 
-There is too much combined pull-up resistance with this board, the OLED board, the Hackaday Badge, and the Pico. This inhibits I2C hardware implementations from working with the OLED display.
+There is too much combined pull-up resistance with this board, the OLED board, the Hackaday Badge, and the Pico. This inhibits some I2C hardware implementations from working with the OLED display.
 
-SOLUTION A: Firmware workaround is to use software I2C.
+SOLUTION A: Firmware workaround is to use software I2C. See: https://github.com/ageppert/SAO_Etch_sAo_Sketch/pull/1
 
-   See: https://github.com/ageppert/SAO_Etch_sAo_Sketch/pull/1
-
-SOLUTION B: Hardware mods to remove interfering components.
-
-   See: https://github.com/ageppert/SAO_Etch_sAo_Sketch/issues/8
-
+SOLUTION B: Hardware mods to remove interfering components. See: https://github.com/ageppert/SAO_Etch_sAo_Sketch/issues/8
 
 -------------
 
@@ -28,6 +23,8 @@ SOLUTION B: Hardware mods to remove interfering components.
 <img src="Images/Etch_sAo_Sketch V1.3 Elecrow.png" height="300">
 
 This version was manufactured for Hackaday Europe 2025 by Elecrow and includes the Elecrow logo on the PCB below the screen. The files have been copied into this repository for easy reference, although it was in a more generic "SAO Sketch" repo for production. Hopefully you got a sticker from one of us to upgrade your SAO to "Etch sAo Sketch" when we were together in Berlin!
+
+V1.3.1 FIXES: Removed I2C Pull-up Resistors R1/2 from the board.
 
 -------------
 
