@@ -55,7 +55,7 @@
     MODE_AT_THE_END_OF_TIME
       I hope you never land in this mode!
 
-  /************************************ ETCH SAO SKETCH - FIRMWARE VERSION TABLE ************************************
+  /************************************ ETCH SAO SKETCH - FWV (FIRMWARE VERSION) TABLE ******************************
   | VERSION |  DATE      | MCU     | DESCRIPTION                                                                    |
   -------------------------------------------------------------------------------------------------------------------
   |  1.0.0  | 2024-11-01 | RP2040  | First draft, hurry up for Supercon!
@@ -64,39 +64,44 @@
   |  1.3.1  | 2025-04-18 | RP2040  | Fix and improve shake side-to-side (upside down or right side up) to erase,
   |         |            |         |   disable screen inversion and pot input select gestures. Add LOAD and RUN, 
   |         |            |         |   and display firmware/hardware versions.
+  |  1.3.2  | 2025-04-25 | RP2040  | Fix glitching wrap-around at ends by bounding ADC count reading with HWV1.3.
   |         |            |         | 
   -----------------------------------------------------------------------------------------------------------------*/
   // TODO: Make this work with Hackaday Supercon 2024 and Berlin 2025 Badge I2C ports 4-5-6 on pins 31 CL / 32 DA GPIO 26/27. 
   //        Ports 1-2-3 on pins 1 DA and 2 CL. GPIO 0/1
     static uint8_t FirmwareVersionMajor  = 1;
     static uint8_t FirmwareVersionMinor  = 3;
-    static uint8_t FirmwareVersionPatch  = 1;
+    static uint8_t FirmwareVersionPatch  = 2;
 
-  /************************************ ETCH SAO SKETCH - HARDWARE VERSION TABLE ************************************
+  /************************************ ETCH SAO SKETCH - HWV (HARDWARE VERSION) TABLE ******************************
   | VERSION |  DATE      |         | DESCRIPTION                                                                    |
   -------------------------------------------------------------------------------------------------------------------
-  |  1.0    | 2024-09-27 |         | First prototype, as built, getting it to come alive. Analog input range of pots
+  |  1.0.0  | 2024-09-27 |         | First prototype, as built, getting it to come alive. Analog input range of pots
   |         |            |         |   is much wider than accelerometer analog inputs can handle. Recommend to use
   |         |            |         |   only with 3.3V capable analog inputs of host MCU through SAO port GPIO1&2.
   |  1.0.1  | 2025-04-14 |         | First prototype, without excess pull-up resistors R30 and R31 10K.
-  |  1.1    | 2024-11-23 |         | V1.0.0 modified with resistors inline (10K highside and 4.8K lowside) with the
+  -------------------------------------------------------------------------------------------------------------------
+  |  1.1.0  | 2024-11-23 |         | V1.0.0 modified with resistors inline (10K highside and 4.8K lowside) with the
   |         |            |         |   pots to enable full travel to map to accelerometer ADC 0.8 to 1.6V input range.
-  |  1.2    | 2024-12-10 |         | RFQ only. Added resistors to scale pot voltage to range accelerometer accepts.
-  |  1.3    | 2025-01-13 |         | Batch for Hackaday Europe with supplier name Elecrow on the front. Some may be
+  |  1.1.1  | 2025-04-25 |         | V1.1.0 with excess pull-up resistors R1/2 removed.
+  -------------------------------------------------------------------------------------------------------------------
+  |  1.2.0  | 2024-12-10 |         | RFQ only. Same as V1.1.0
+  -------------------------------------------------------------------------------------------------------------------
+  |  1.3.0  | 2025-01-13 |         | Batch for Hackaday Europe with supplier name Elecrow on the front. Some may be
   |         |            |         |   updated with an additional clear Etch sAo Sketch sticker on the top as well.
   |  1.3.1  | 2025-04-13 |         | Removed R1 and R2 to reduce the excessive pull-up resistance for wider MCU
   |         |            |         |   compatibility.
   |         |            |         |
   |         |            |         |
   -------------------------------------------------------------------------------------------------------------------
-  ************************************* Etch sAo Sketch Hardware Version Setting ************************************
+  ************************************* ETCH SAO SKETCH - HWV (HARDWARE VERSION) SETTING ****************************
   This default mode of input from the analog pots (I2C Accelerometer ADC = 0 or Arduino/RP2040 ADCs = 1) 
   will be set during MODE_BOOT_SCREEN...                                                                           */
     static bool    EASAnalogSource;
   // ...based on the hardware version set in the following three lines.
     static uint8_t HardwareVersionMajor  = 1;
-    static uint8_t HardwareVersionMinor  = 0;
-    static uint8_t HardwareVersionPatch  = 1;
+    static uint8_t HardwareVersionMinor  = 3;
+    static uint8_t HardwareVersionPatch  = 0;
 /*******************************************************************************************************************/
 
 #include <Adafruit_SSD1327.h>
@@ -108,7 +113,7 @@
 
 // #define DEBUG_SHAKE
 // #define DEBUG_CURSOR
-// #define DEBUG_ADC
+#define DEBUG_ADC
 
 #define OLED_ADDRESS                0x3C      // OLED SSD1327 is 0x3C
 #define OLED_RESET                    -1
@@ -471,7 +476,6 @@ void OLEDBackgroundReset() {
   else               { OLEDClear(); }
 }
 
-
 void SAOGPIOPinInit (){
   // Nothing to do because analog input is default for Arduino.
 }
@@ -807,6 +811,9 @@ void loop()
         // Accelerometer Analog Reading (LIS3DH Analog reading is partial scale, limited between 0.9 and 1.8V)
         // Also scale these readings up to what Arduino ADC uses, so the rest of the processing code below doesn't need to change.
         adc = lis.readADC(1);
+        // Limit reading to stay in bounds.
+        if (adc < AccelADCRangeLowCounts ) { adc = AccelADCRangeLowCounts; }
+        if (adc > AccelADCRangeHighCounts ) { adc = AccelADCRangeHighCounts; }
         // volt = map(adc, -32512, 32512, 1400, 900);
         volt = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, AccelADCRangeHighmV, AccelADCRangeLowmV);
         #ifdef DEBUG_ADC
@@ -816,6 +823,9 @@ void loop()
         // PotLeftADCCounts = map(adc, -32512, 32512, 1023, 0);
         cursorX = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, 0, 126);
         adc = lis.readADC(2);
+        // Limit reading to stay in bounds.
+        if (adc < AccelADCRangeLowCounts ) { adc = AccelADCRangeLowCounts; }
+        if (adc > AccelADCRangeHighCounts ) { adc = AccelADCRangeHighCounts; }
         // volt = map(adc, -32512, 32512, 1400, 900);
         volt = map(adc, AccelADCRangeLowCounts, AccelADCRangeHighCounts, AccelADCRangeHighmV, AccelADCRangeLowmV);
         #ifdef DEBUG_ADC
