@@ -101,8 +101,8 @@
     static bool    EASAnalogSource;
   // ...based on the hardware version set in the following three lines.
     static uint8_t HardwareVersionMajor  = 1;
-    static uint8_t HardwareVersionMinor  = 3;
-    static uint8_t HardwareVersionPatch  = 0;
+    static uint8_t HardwareVersionMinor  = 1;
+    static uint8_t HardwareVersionPatch  = 1;
 /*******************************************************************************************************************/
 
 #include <Adafruit_SSD1327.h>
@@ -130,7 +130,7 @@ static uint16_t cursorX = 0;                               // 0-127 pixels
 static uint16_t cursorY = 0;                               // 0-127 pixels
 static uint16_t cursorXold = 0;                            // 0-127 pixels
 static uint16_t cursorYold = 0;                            // 0-127 pixels
-static bool     EASBackground = 0;                         // 0 = dark, 1 = white (default)
+static bool     EASBackground = 0;                         // 0 = dark (default), 1 = white (display doesn't look as good)
 static uint8_t  CursorPosXLeft = 13;
 static uint8_t  CursorPosX = CursorPosXLeft;
 static uint8_t  CursorPosY = 0;
