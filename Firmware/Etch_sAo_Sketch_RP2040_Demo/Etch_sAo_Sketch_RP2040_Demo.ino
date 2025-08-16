@@ -66,13 +66,14 @@
   |         |            |         |   and display firmware/hardware versions.
   |  1.3.2  | 2025-04-25 | RP2040  | Fix glitching wrap-around at ends by bounding ADC count reading with HWV1.3.
   |  1.3.3  | 2025-04-25 | RP2040  | Tighten ADC left/bottom range to ensure drawing to edges of screen with HWV1.1+.
+  |  1.3.4  | 2025-08-16 | RP2040  | Quicker boot up, red LED breathing.
   |         |            |         | 
   -----------------------------------------------------------------------------------------------------------------*/
   // TODO: Make this work with Hackaday Supercon 2024 and Berlin 2025 Badge I2C ports 4-5-6 on pins 31 CL / 32 DA GPIO 26/27. 
   //        Ports 1-2-3 on pins 1 DA and 2 CL. GPIO 0/1
     static uint8_t FirmwareVersionMajor  = 1;
     static uint8_t FirmwareVersionMinor  = 3;
-    static uint8_t FirmwareVersionPatch  = 3;
+    static uint8_t FirmwareVersionPatch  = 4;
 
   /************************************ ETCH SAO SKETCH - HWV (HARDWARE VERSION) TABLE ******************************
   | VERSION |  DATE      |         | DESCRIPTION                                                                    |
@@ -112,6 +113,18 @@
 #include <Adafruit_LIS3DH.h>
 #include <Adafruit_Sensor.h>
 
+#define LED_ENABLE
+#ifdef LED_ENABLE
+  #include <Adafruit_NeoPixel.h>
+  #define PIN_RGB_LED 16
+  #define NUMPIXELS 1
+  Adafruit_NeoPixel pixels(NUMPIXELS, PIN_RGB_LED, NEO_RGB + NEO_KHZ800);
+  #define LED_PEAK 4 // Highest brightness allowed (0-255)
+  volatile uint32_t LEDNowTime = 0;
+  volatile uint32_t LEDLastTime = 0;
+  static uint32_t LEDDeltaTime = 100;
+#endif
+
 // #define DEBUG_SHAKE
 // #define DEBUG_CURSOR
 // #define DEBUG_ADC
@@ -141,6 +154,7 @@ static bool     CursorState = 0;
 static uint32_t NowTime;
 static uint32_t LastTime;
 static uint32_t BlinkDeltaTime = 600;
+static uint8_t KeyStrokeDelay = 25; // 0-255 ms
 
 #define ACCELEROMETER_ADDRESS       0x19      // LIS3DH Acceleromter default is 0x19
 Adafruit_LIS3DH lis = Adafruit_LIS3DH();
@@ -270,6 +284,45 @@ bool OLEDInit() {
     OLEDClear();
   }
   return 0;
+}
+
+bool LEDInit() {
+  #ifdef LED_ENABLE
+    pixels.begin();
+    return 0;
+  #endif
+  return 1;
+}
+
+void LEDBreath() {
+  #ifdef LED_ENABLE
+    static uint8_t brightness = 0;
+    static bool increasing = true;
+
+    // Is it time to change brightness?
+    LEDNowTime = millis();
+    if ( (LEDNowTime-LEDLastTime) > LEDDeltaTime) {
+      LEDLastTime = LEDNowTime;
+      if (increasing) {
+        if (brightness < LED_PEAK) {
+          brightness++;
+        }
+        else {
+          increasing = false;
+        }
+      }
+      else {
+        if (brightness > 0) {
+          brightness--;
+        }
+        else {
+          increasing = true;
+        }
+      }
+      pixels.setPixelColor(0, pixels.Color(0, brightness, 0));
+      pixels.show();
+    }
+  #endif
 }
 
 bool AccelerometerInit() {
@@ -527,11 +580,18 @@ void CursorErase() {
 // -------------------------------------------------------------------------------------------
 void loop()
 {
+  #ifdef LED_ENABLE
+    LEDBreath();
+  #endif
+
   switch(TopLevelMode) {
     case MODE_INIT: {
       SerialInit();
       Serial.println(">>> Entered MODE_INIT.");
       OLEDInit();
+      #ifdef LED_ENABLE
+        LEDInit();
+      #endif
       AccelerometerInit();
       SAOGPIOPinInit();
       Serial.println("");
@@ -635,75 +695,75 @@ void loop()
         Serial.println(">>> Entered MODE_LOAD.");
         display.println("L");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         CursorPosX = CursorPosX + 6;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("O");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         CursorPosX = CursorPosX + 6;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("A");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         CursorPosX = CursorPosX + 6;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("D");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         ModeTimeOutCheckReset();
         CursorPosX = CursorPosX + 6;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("\"");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         ModeTimeOutCheckReset();
         CursorPosX = CursorPosX + 6;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("S");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         ModeTimeOutCheckReset();
         CursorPosX = CursorPosX + 6;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("K");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         ModeTimeOutCheckReset();
         CursorPosX = CursorPosX + 6;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("E");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         ModeTimeOutCheckReset();
         CursorPosX = CursorPosX + 6;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("T");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         ModeTimeOutCheckReset();
         CursorPosX = CursorPosX + 6;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("C");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         ModeTimeOutCheckReset();
         CursorPosX = CursorPosX + 6;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("H");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         ModeTimeOutCheckReset();
         CursorPosX = CursorPosX + 6;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("\"");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         ModeTimeOutCheckReset();
         CursorPosX = CursorPosX + 6;
       }
       CursorBlink();
-      if (ModeTimeOutCheck(800)){ 
+      if (ModeTimeOutCheck(500)){ 
         ModeTimeOutCheckReset();
         CursorErase();
         TopLevelMode++;
@@ -722,7 +782,7 @@ void loop()
         display.setCursor(CursorPosX,CursorPosY);
         display.println("PRESS PLAY.");
         display.display();
-        delay(1000);
+        delay(500);
         CursorPosX = CursorPosXLeft;
         CursorPosY = CursorPosY + CursorNewLine;
         display.setCursor(CursorPosX,CursorPosY);
@@ -731,7 +791,7 @@ void loop()
         ModeTimeOutCheckReset();
       }
 
-      if (ModeTimeOutCheck(3000)){ 
+      if (ModeTimeOutCheck(1000)){ 
         ModeTimeOutCheckReset();
         TopLevelMode++;
         ModeTimeoutFirstTimeRun = true;
@@ -760,18 +820,18 @@ void loop()
         display.setCursor(CursorPosX,CursorPosY);
         display.println("READY.");
         display.display();
-        delay(800);
+        delay(400);
         CursorPosX = CursorPosXLeft;
         CursorPosY = CursorPosY + CursorNewLine;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("R");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         CursorPosX = CursorPosX + 6;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("U");
         display.display();
-        delay(200);
+        delay(KeyStrokeDelay);
         CursorPosX = CursorPosX + 6;
         display.setCursor(CursorPosX,CursorPosY);
         display.println("N");
@@ -780,7 +840,7 @@ void loop()
         ModeTimeOutCheckReset();
       }
       CursorBlink();
-      if (ModeTimeOutCheck(1000)){ 
+      if (ModeTimeOutCheck(500)){ 
         ModeTimeOutCheckReset();
         TopLevelMode++;
         CursorErase();
