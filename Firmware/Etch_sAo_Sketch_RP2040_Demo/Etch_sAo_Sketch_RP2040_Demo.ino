@@ -67,13 +67,14 @@
   |  1.3.2  | 2025-04-25 | RP2040  | Fix glitching wrap-around at ends by bounding ADC count reading with HWV1.3.
   |  1.3.3  | 2025-04-25 | RP2040  | Tighten ADC left/bottom range to ensure drawing to edges of screen with HWV1.1+.
   |  1.3.4  | 2025-08-16 | RP2040  | Quicker boot up, red LED breathing.
+  |  1.3.5  | 2025-08-16 | RP2040  | Adjusted low end voltage/ADC to work with 3.0V supply, accounting for Demo Controller V2 diode drop.
   |         |            |         | 
   -----------------------------------------------------------------------------------------------------------------*/
   // TODO: Make this work with Hackaday Supercon 2024 and Berlin 2025 Badge I2C ports 4-5-6 on pins 31 CL / 32 DA GPIO 26/27. 
   //        Ports 1-2-3 on pins 1 DA and 2 CL. GPIO 0/1
     static uint8_t FirmwareVersionMajor  = 1;
     static uint8_t FirmwareVersionMinor  = 3;
-    static uint8_t FirmwareVersionPatch  = 4;
+    static uint8_t FirmwareVersionPatch  = 5;
 
   /************************************ ETCH SAO SKETCH - HWV (HARDWARE VERSION) TABLE ******************************
   | VERSION |  DATE      |         | DESCRIPTION                                                                    |
@@ -127,7 +128,7 @@
 
 // #define DEBUG_SHAKE
 // #define DEBUG_CURSOR
-// #define DEBUG_ADC
+#define DEBUG_ADC
 
 #define OLED_ADDRESS                0x3C      // OLED SSD1327 is 0x3C
 #define OLED_RESET                    -1
@@ -171,11 +172,11 @@ uint16_t PotMarginAtLimit = 10;
 // uint16_t PotFilterSampleCount = 3;
 // uint16_t deltaAbsolute = 0;
 // uint16_t CursorHystersisLimit = 4;
-int16_t AccelADCRangeLowCounts  = -1500;      // Tested with 3.3V supply voltage, R5 10K, R6 4K7
+int16_t AccelADCRangeLowCounts  = 9000; // 9000 works better with 3V supply. Was -1500;      // Tested with 3.3V supply voltage, R5 10K, R6 4K7
                                               // FWV V1.3 
 int16_t AccelADCRangeHighCounts = 32512;
 int16_t AccelADCRangeLowmV      =   900;      // FWV V1.3 
-int16_t AccelADCRangeHighmV     =  1400;
+int16_t AccelADCRangeHighmV     = 1200; // 1200 works better with 3V supply. Was 1400;
 
 enum TopLevelMode                             // Top Level Mode State Machine
 {
