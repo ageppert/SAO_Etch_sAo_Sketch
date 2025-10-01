@@ -68,51 +68,75 @@
   |  1.3.3  | 2025-04-25 | RP2040  | Tighten ADC left/bottom range to ensure drawing to edges of screen with HWV1.1+.
   |  1.3.4  | 2025-08-16 | RP2040  | Quicker boot up, red LED breathing.
   |  1.3.5  | 2025-08-16 | RP2040  | Adjusted low end voltage/ADC to work with 3.0V supply, accounting for Demo Controller V2 diode drop.
+  |  1.3.6  | 2025-09-26 | RP2040  | Add support to optionally connect Etch sAo Sketch to the incoming SAO port I2C1 to fully cover the Demo Controller.
   |         |            |         | 
   -----------------------------------------------------------------------------------------------------------------*/
   // TODO: Make this work with Hackaday Supercon 2024 and Berlin 2025 Badge I2C ports 4-5-6 on pins 31 CL / 32 DA GPIO 26/27. 
   //        Ports 1-2-3 on pins 1 DA and 2 CL. GPIO 0/1
     static uint8_t FirmwareVersionMajor  = 1;
     static uint8_t FirmwareVersionMinor  = 3;
-    static uint8_t FirmwareVersionPatch  = 5;
+    static uint8_t FirmwareVersionPatch  = 6;
 
   /************************************ ETCH SAO SKETCH - HWV (HARDWARE VERSION) TABLE ******************************
-  | VERSION |  DATE      |         | DESCRIPTION                                                                    |
+  | VERSION |  DATE      | ADC ?   | DESCRIPTION                                                                    |
   -------------------------------------------------------------------------------------------------------------------
-  |  1.0.0  | 2024-09-27 |         | First prototype, as built, getting it to come alive. Analog input range of pots
-  |         |            |         |   is much wider than accelerometer analog inputs can handle. Recommend to use
+  |  1.0.0  | 2024-09-27 | RP2040  | First prototype, as built, getting it to come alive. Analog input range of pots
+  |         |            |  only   |   is much wider than accelerometer analog inputs can handle. Recommend to use
   |         |            |         |   only with 3.3V capable analog inputs of host MCU through SAO port GPIO1&2.
   |  1.0.1  | 2025-04-14 |         | First prototype, without excess pull-up resistors R30 and R31 10K.
   -------------------------------------------------------------------------------------------------------------------
-  |  1.1.0  | 2024-11-23 |         | V1.0.0 modified with resistors inline (10K highside and 4.8K lowside) with the
-  |         |            |         |   pots to enable full travel to map to accelerometer ADC 0.8 to 1.6V input range.
-  |  1.1.1  | 2025-04-25 |         | V1.1.0 with excess pull-up resistors R1/2 removed.
+  |  1.1.0  | 2024-11-23 | Accel   | V1.0.0 modified with resistors inline (10K highside and 4.8K lowside) with the
+  |         |            |   or    |   pots to enable full travel to map to accelerometer ADC 0.8 to 1.6V input range.
+  |  1.1.1  | 2025-04-25 | RP2040  | V1.1.0 with excess pull-up resistors R1/2 removed.
   -------------------------------------------------------------------------------------------------------------------
   |  1.2.0  | 2024-12-10 |         | RFQ only. Same as V1.1.0
   -------------------------------------------------------------------------------------------------------------------
-  |  1.3.0  | 2025-01-13 |         | Batch for Hackaday Europe with supplier name Elecrow on the front. Some may be
-  |         |            |         |   updated with an additional clear Etch sAo Sketch sticker on the top as well.
-  |  1.3.1  | 2025-04-13 |         | Removed R1 and R2 to reduce the excessive pull-up resistance for wider MCU
+  |  1.3.0  | 2025-01-13 | Accel   | Batch for Hackaday Europe with supplier name Elecrow on the front. Some may be
+  |         |            |   or    |   updated with an additional clear Etch sAo Sketch sticker on the top as well.
+  |  1.3.1  | 2025-04-13 | RP2040  | Removed R1 and R2 to reduce the excessive pull-up resistance for wider MCU
   |         |            |         |   compatibility.
-  |         |            |         |
   |         |            |         |
   -------------------------------------------------------------------------------------------------------------------
   ************************************* ETCH SAO SKETCH - HWV (HARDWARE VERSION) SETTING ****************************
-  This default mode of input from the analog pots (I2C Accelerometer ADC = 0 or Arduino/RP2040 ADCs = 1) 
+  This will be the default mode of input from the analog pots (I2C Accelerometer ADC = 0 or Arduino/RP2040 ADCs = 1) 
   will be set during MODE_BOOT_SCREEN...                                                                           */
     static bool    EASAnalogSource;
   // ...based on the hardware version set in the following three lines.
     static uint8_t HardwareVersionMajor  = 1;
-    static uint8_t HardwareVersionMinor  = 1;
+    static uint8_t HardwareVersionMinor  = 3;
     static uint8_t HardwareVersionPatch  = 1;
 /*******************************************************************************************************************/
 
 #include <Adafruit_SSD1327.h>
 #include <Fonts/FreeMono9pt7b.h>  // https://learn.adafruit.com/adafruit-gfx-graphics-library/using-fonts
-// #include <Wire.h>                             // RP2040 Pico-Zero default I2C port is GPIO4 (SDA0) and GPIO5 (SCL0).
+#include <Wire.h>                             // RP2040 Pico-Zero default I2C port is GPIO4 (SDA0) and GPIO5 (SCL0).
                                               // RP2040 Pico W default I2C port is GPIO4 (SDA0) and GPIO5 (SCL0).
 #include <Adafruit_LIS3DH.h>
 #include <Adafruit_Sensor.h>
+
+/****** IMPORTANT ******
+  Using the SAO Demo Controller's bottom SAO port with I2C1 means power will enter the system through the USB C port
+  on the RP2040-zero. That power is regulated to 3.3V on the RP20240-Zero and must be routed to the I2C1 port. This requires:
+    1) soldering on a small wire to the SAO Demo Controller from JP4 pin 1 to JP1 bottom pad 
+    2) and removing D1.
+  Of course, the SAO socket on the Demo Controller needs to be moved or installed on the top side of the board to accept the 
+  Etch sAo Sketch on the top. For more details and illustrations, see the project page linked at the top of this file.
+************************/
+// Choose only one port by setting one of the following to true:
+  // Default top SAO output port I2C0 channel
+    #define I2C_PORT0 false // true
+  // Optional use of the bottom SAO "input" port I2C1 channel as an output so Etch sAo Sketch and Demo Controller stack perfectly.
+    #define I2C_PORT1 true // false
+
+#if I2C_PORT0
+  #define I2C0_SDA_PIN 4
+  #define I2C0_SCL_PIN 5
+#endif
+
+#if I2C_PORT1
+  #define I2C1_SDA_PIN 2
+  #define I2C1_SCL_PIN 3
+#endif
 
 #define LED_ENABLE
 #ifdef LED_ENABLE
@@ -137,8 +161,14 @@
 #define OLED_WHITE                    15
 #define OLED_GRAY                      7
 #define OLED_BLACK                     0
-// MbedI2C i2c(p0,p1);
+
+#if I2C_PORT0
 Adafruit_SSD1327 display(OLED_HEIGHT, OLED_WIDTH, &Wire, OLED_RESET, 1000000);
+#endif
+#if I2C_PORT1
+Adafruit_SSD1327 display(OLED_HEIGHT, OLED_WIDTH, &Wire1, OLED_RESET, 1000000);
+#endif
+
 static uint8_t  color = OLED_WHITE;                        // 0-15 shades of gray
 static uint16_t cursorX = 0;                               // 0-127 pixels
 static uint16_t cursorY = 0;                               // 0-127 pixels
@@ -158,7 +188,12 @@ static uint32_t BlinkDeltaTime = 600;
 static uint8_t KeyStrokeDelay = 25; // 0-255 ms
 
 #define ACCELEROMETER_ADDRESS       0x19      // LIS3DH Acceleromter default is 0x19
-Adafruit_LIS3DH lis = Adafruit_LIS3DH();
+#if I2C_PORT0
+  Adafruit_LIS3DH lis = Adafruit_LIS3DH();
+#endif
+#if I2C_PORT1
+  Adafruit_LIS3DH lis = Adafruit_LIS3DH(&Wire1);
+#endif
 
 #define PIN_SAO_GPIO_1_ANA_POT_LEFT   A0      // Configured as left analog pot
 #define PIN_SAO_GPIO_2_ANA_POT_RIGHT  A1      // Configured as right analog pot
@@ -172,11 +207,15 @@ uint16_t PotMarginAtLimit = 10;
 // uint16_t PotFilterSampleCount = 3;
 // uint16_t deltaAbsolute = 0;
 // uint16_t CursorHystersisLimit = 4;
-int16_t AccelADCRangeLowCounts  = 9000; // 9000 works better with 3V supply. Was -1500;      // Tested with 3.3V supply voltage, R5 10K, R6 4K7
-                                              // FWV V1.3 
+int16_t AccelADCRangeLowCounts  =  9000; // 9000 works better with 3V supply. Was -1500;      // Tested with 3.3V supply voltage, R5 10K, R6 4K7
 int16_t AccelADCRangeHighCounts = 32512;
-int16_t AccelADCRangeLowmV      =   900;      // FWV V1.3 
-int16_t AccelADCRangeHighmV     = 1200; // 1200 works better with 3V supply. Was 1400;
+int16_t AccelADCRangeLowmV      =   900;
+#if I2C_PORT0
+  int16_t AccelADCRangeHighmV     =  1200; // 1200 works better with 3V supply.
+#endif
+#if I2C_PORT1
+  int16_t AccelADCRangeHighmV     =  1400; // 1400 works better with 3.3V supply.
+#endif
 
 enum TopLevelMode                             // Top Level Mode State Machine
 {
@@ -258,9 +297,19 @@ IIRFilterWithIntegers IIRFilterY(0.1);
 
 void setup()
 {
-  // Wire.setSDA(26);
-  // Wire.setSCL(27);
-  // MbedI2C i2c(1,2);
+  #if I2C_PORT0
+    // Set the SDA and SCL pins for the Wire1 object before beginning
+    Wire.setSDA(I2C0_SDA_PIN);
+    Wire.setSCL(I2C0_SCL_PIN);
+    Wire.begin();
+  #endif
+
+  #if I2C_PORT1
+    // Set the SDA and SCL pins for the Wire1 object before beginning
+    Wire1.setSDA(I2C1_SDA_PIN);
+    Wire1.setSCL(I2C1_SCL_PIN);
+    Wire1.begin();
+  #endif
 
   // Nothing to see here. Everything runs in a simple state machine in the main loop function, and the bottom of this file.
 }

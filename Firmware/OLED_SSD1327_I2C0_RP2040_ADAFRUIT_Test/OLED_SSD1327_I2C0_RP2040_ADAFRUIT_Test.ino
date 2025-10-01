@@ -17,9 +17,12 @@
 //Adafruit_SSD1327 display(128, 128, &SPI, OLED_DC, OLED_RESET, OLED_CS);
 
 // I2C
-MbedI2C i2c(0,1);
+    Wire1.setSDA(2);
+    Wire1.setSCL(3);
+    Wire1.begin(); // Initialize I2C1
+// MbedI2C i2c(2,3);
 
-Adafruit_SSD1327 display(128, 128, &Wire, OLED_RESET, 1000000);
+Adafruit_SSD1327 display(128, 128, &Wire1, OLED_RESET, 1000000);
 
 #define NUMFLAKES 10
 #define XPOS 0
