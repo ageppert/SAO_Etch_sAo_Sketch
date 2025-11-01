@@ -12,13 +12,12 @@ class EtchSaoSketch():
     calib_right_zero_offset = 27945
     calib_voltage_scaling = 1.750592
 
-    def __init__(self, i2c_bus):
-        print ("saving i2c bus")
+    def __init__(self, i2c_bus, enable_calib=True, enable_shaking=True):
         self._i2c = i2c_bus
+        self._enable_calib = enable_calib
+        self._enable_shaking = enable_shaking
         print ("init ssd1327 display")
-        # a = ssd1327.SSD1327_I2C()
-        self._display = ssd1327.WS_OLED_128X128(self._i2c)
-        #self._display = ssd1327.SSD1327(self._i2c)
+        self._display = ssd1327.WS_OLED_128X128(self._i2c, max_segment_length=512)
         print ("init accelerometer (and ADC)")
         self._lis3dh = lis3dh_wrapper.lis3dh_wrapper(self._i2c)
         self._lis3dh.set_tap(tap=2, threshold=80, time_limit=1, click_cfg=0x04)
@@ -69,9 +68,12 @@ class EtchSaoSketch():
         left_registered = False
         calib_successful = False
         deadline = time.ticks_add(time.ticks_ms(), 5000)
-        while time.ticks_diff(deadline, time.ticks_ms()) > 0:
+        while time.ticks_diff(deadline, time.ticks_ms()) > 0 and not left_registered:
             r = self._lis3dh.right
             l = self._lis3dh.left
+            # Debug:
+            # self.draw_pixel(int(r/(lowest_r/128)), int(l/(lowest_l/128)), 10)
+            # self.draw_display()
             if abs(r-l) < 1000:
                 # Both knobs are more or less in the same position
                 if r > 60000:
@@ -95,6 +97,7 @@ class EtchSaoSketch():
                     if not left_registered:
                         print("Registered knobs all the way left")
                         left_registered = True
+        self.clear_display()
         if lowest_r < 65535 and lowest_l < 65535 and highest_r > 0 and highest_l > 0:
             calib_successful = True
             # Since we are not averaging the low and high values over time, we are reading uncommonly low and high values.
@@ -107,25 +110,20 @@ class EtchSaoSketch():
             self.calib_right_zero_offset = lowest_r
             self.calib_left_zero_offset = lowest_l
             self.calib_voltage_scaling = max(highest_r, highest_l) / (max(highest_r, highest_l) - min(lowest_r, lowest_l))
-            self.shake()
             
             self.draw_text("Calibration", 10, 20, 15)
             self.draw_text("successful!", 10, 30, 15)
             self.draw_text("Values:", 10, 40, 15)
-            self.draw_text(f"{self.calib_left_zero_offset},", 10, 50, 15)
-            self.draw_text(f"{self.calib_right_zero_offset},", 10, 60, 15)
-            self.draw_text(f"{self.calib_voltage_scaling:.6f}", 10, 70, 15)
         else:
-            self.shake()
             self.draw_text("Calibration", 10, 20, 15)
             self.draw_text("failed...", 10, 30, 15)
             self.draw_text("Defaults:", 10, 40, 15)
-            self.draw_text(f"{self.calib_left_zero_offset},", 10, 50, 15)
-            self.draw_text(f"{self.calib_right_zero_offset},", 10, 60, 15)
-            self.draw_text(f"{self.calib_voltage_scaling:.6f}", 10, 70, 15)
+        self.draw_text(f"{self.calib_left_zero_offset},", 10, 50, 15)
+        self.draw_text(f"{self.calib_right_zero_offset},", 10, 60, 15)
+        self.draw_text(f"{self.calib_voltage_scaling:.6f}", 10, 70, 15)
         return calib_successful
                     
-    def shake(self):
+    def clear_display(self):
         if self._display:
             self._display.fill(0)
             self.draw_display()
@@ -146,23 +144,68 @@ class EtchSaoSketch():
     def draw_display(self):
         if self._display:
             self._display.show()
+
+    # to initialize the sketch game
+    def sketch_init(self):
+        self.clear_display()
+
+        if self._enable_calib:
+            # Calibrate after screen has started, to account for power drop caused by the OLED current draw
+            print("Starting ADC calibration routine:")
+            print("Within 5 seconds, in the following order")
+            print("1. Turn both knobs all the way right")
+            print("2. Turn both knobs all the way left")
+            success = self.try_calibration_routine()
+            if success:
+                print("ADC calibration succeeded.")
+                print(f"Calibration values: r={self.calib_right_zero_offset}, l={self.calib_left_zero_offset}, s={self.calib_voltage_scaling}")
+            else:
+                print("ADC calibration failed.")
+                print(f"Using default values: r={self.calib_right_zero_offset}, l={self.calib_left_zero_offset}, s={self.calib_voltage_scaling}")
+
+        time.sleep_ms(500)
+        self.clear_display()
+
+        self._cycles = 20 # 20 seems OK with fully populated badge, 40 is OK with only Etch sAo Sketch connected, but brings little additional benefit
+        self._avg_cycles = self._cycles
+        self._avg_left = 0
+        self._avg_right = 0
+        self._prev_left = self.left
+        self._prev_right = 127 - self.right
     
+    # the main loop of the sketch game to be called periodically
+    def sketch_loop(self):
+        # Check if the badge has been flipped, and clear the screen if it has
+        if self._enable_shaking and self.shake_detected:
+            print("Shake detected")
+            self.clear_display()
+
+        self._avg_left += self.left
+        self._avg_right += 127 - self.right
+
+        if self._avg_cycles == 0:
+            etch_left = min(max(int(self._avg_left/self._cycles), 0), 127)
+            etch_right = min(max(int(self._avg_right/self._cycles), 0), 127)
+        
+            self.draw_line(self._prev_left, self._prev_right, etch_left, etch_right, 15)
+            self.draw_display()
+
+            self._prev_left = etch_left
+            self._prev_right = etch_right
+
+            self._avg_cycles = self._cycles
+            self._avg_left = 0
+            self._avg_right = 0
+        else:
+            self._avg_cycles -= 1
+
+
 if __name__ == "__main__":
     
     i2c1 = SoftI2C(sda=Pin(26), scl=Pin(27))
     
     sao = EtchSaoSketch(i2c1)
-    sao.shake() # clear display
-    
-    success = sao.try_calibration_routine()
-    print(success)
-    time.sleep(1)
-    sao.shake()
+    sao.sketch_init()
     
     while True:
-       left = sao.left
-       right = 128 - sao.right
-       print (left, right)
-       sao.draw_pixel(left, right, 15)
-       sao.draw_display()
-
+       sao.sketch_loop()

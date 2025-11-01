@@ -170,9 +170,10 @@ class SSD1327:
 
 
 class SSD1327_I2C(SSD1327):
-    def __init__(self, width, height, i2c, addr=0x3c):
+    def __init__(self, width, height, i2c, addr=0x3c, max_segment_length=1024):
         self.i2c = i2c
         self.addr = addr
+        self.max_segment_length = max_segment_length
         self.cmd_arr = bytearray([REG_CMD, 0])  # Co=1, D/C#=0
         self.data_list = [bytes((REG_DATA,)), None]
         super().__init__(width, height)
@@ -182,7 +183,7 @@ class SSD1327_I2C(SSD1327):
         self.i2c.writeto(self.addr, self.cmd_arr)
 
     def write_data(self, data_buf):
-        segments = self.split_into_segments(data_buf)
+        segments = self.split_into_segments(data_buf, segment_length=self.max_segment_length)
         for i, segment in enumerate(segments):
             self.data_list[1] = segment
             self.i2c.writevto(self.addr, self.data_list)
@@ -193,8 +194,8 @@ class SSD1327_I2C(SSD1327):
 
 
 class WS_OLED_128X128(SSD1327_I2C):
-    def __init__(self, i2c, addr=0x3c):
-        super().__init__(128, 128, i2c, addr)
+    def __init__(self, i2c, addr=0x3c, max_segment_length=1024):
+        super().__init__(128, 128, i2c, addr, max_segment_length)
         
 # Example usage
 if __name__ == "__main__":
