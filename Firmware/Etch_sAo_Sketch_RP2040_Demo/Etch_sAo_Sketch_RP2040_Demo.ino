@@ -6,7 +6,7 @@
 
   DEPENDENCIES - FIRMWARE
     This demo will work with a huge range of IDEs and hardware, but it was developed and tested with the following:
-    Arduino IDE 2.3.2 
+    Arduino IDE 2.3.2
       Install "Arduino Mbed OS RP2040 Boards" v4.2.2 with Arduino Boards Manager
         - The Wire Library is included.
       Adafruit SSD1327 libray with dependencies:
@@ -69,13 +69,18 @@
   |  1.3.4  | 2025-08-16 | RP2040  | Quicker boot up, red LED breathing.
   |  1.3.5  | 2025-08-16 | RP2040  | Adjusted low end voltage/ADC to work with 3.0V supply, accounting for Demo Controller V2 diode drop.
   |  1.3.6  | 2025-09-26 | RP2040  | Add support to optionally connect Etch sAo Sketch to the incoming SAO port I2C1 to fully cover the Demo Controller.
+  |  1.3.7  | 2026-09-05 | RP2040  | Add calibrate mode via GP14 Button (Demo Controller V2 button, and V3,V4 upper left USER BUTTON 1)
+  |         |            |         |   Increase shake-to-clear sensitivity and enable up-down detection for clearing.
+  |         |            |         |   Extend default Accelerometer ADC range to fit display better.
+  |  1.4.0  | 2026-09-23 | RP2040  | Calibrate pot scaling for hardware version 1.4.0
+  |         |            |         | 
   |         |            |         | 
   -----------------------------------------------------------------------------------------------------------------*/
   // TODO: Make this work with Hackaday Supercon 2024 and Berlin 2025 Badge I2C ports 4-5-6 on pins 31 CL / 32 DA GPIO 26/27. 
   //        Ports 1-2-3 on pins 1 DA and 2 CL. GPIO 0/1
     static uint8_t FirmwareVersionMajor  = 1;
-    static uint8_t FirmwareVersionMinor  = 3;
-    static uint8_t FirmwareVersionPatch  = 6;
+    static uint8_t FirmwareVersionMinor  = 4;
+    static uint8_t FirmwareVersionPatch  = 0;
 
   /************************************ ETCH SAO SKETCH - HWV (HARDWARE VERSION) TABLE ******************************
   | VERSION |  DATE      | ADC ?   | DESCRIPTION                                                                    |
@@ -89,12 +94,17 @@
   |         |            |   or    |   pots to enable full travel to map to accelerometer ADC 0.8 to 1.6V input range.
   |  1.1.1  | 2025-04-25 | RP2040  | V1.1.0 with excess pull-up resistors R1/2 removed.
   -------------------------------------------------------------------------------------------------------------------
-  |  1.2.0  | 2024-12-10 |         | RFQ only. Same as V1.1.0
+  |  1.2.0  | 2024-12-10 |         | RFQ only. Same as V1.1.0. Never produced.
   -------------------------------------------------------------------------------------------------------------------
   |  1.3.0  | 2025-01-13 | Accel   | Batch for Hackaday Europe with supplier name Elecrow on the front. Some may be
   |         |            |   or    |   updated with an additional clear Etch sAo Sketch sticker on the top as well.
   |  1.3.1  | 2025-04-13 | RP2040  | Removed R1 and R2 to reduce the excessive pull-up resistance for wider MCU
-  |         |            |         |   compatibility.
+  |         |            |         |   compatibility (from the red board) and better I2C performance.
+  |  1.3.2  | 2026-08-01 |         | Removed resistors R2 and R3 pull-ups and ZD1 and ZD2 diodes from the blue OLED
+  |         |            |         |   Board for better I2C performance.
+  -------------------------------------------------------------------------------------------------------------------
+  |  1.4.0  | 2026-09-23 |         | Gold ENIG Etch sAo Sketch on top. Remove pull-up resistors on main board and 
+  |         |            |         |   and OLED board. Remove OLED power solder jumpers.
   |         |            |         |
   -------------------------------------------------------------------------------------------------------------------
   ************************************* ETCH SAO SKETCH - HWV (HARDWARE VERSION) SETTING ****************************
@@ -102,9 +112,12 @@
   will be set during MODE_BOOT_SCREEN...                                                                           */
     static bool    EASAnalogSource;
   // ...based on the hardware version set in the following three lines.
-    static uint8_t HardwareVersionMajor  = 1;
-    static uint8_t HardwareVersionMinor  = 3;
-    static uint8_t HardwareVersionPatch  = 1;
+    #define HARDWARE_VERSION_MAJOR  1
+    #define HARDWARE_VERSION_MINOR  4
+    #define HARDWARE_VERSION_PATCH  0
+    static uint8_t HardwareVersionMajor  = HARDWARE_VERSION_MAJOR;
+    static uint8_t HardwareVersionMinor  = HARDWARE_VERSION_MINOR;
+    static uint8_t HardwareVersionPatch  = HARDWARE_VERSION_PATCH;
 /*******************************************************************************************************************/
 
 #include <Adafruit_SSD1327.h>
@@ -124,9 +137,21 @@
 ************************/
 // Choose only one port by setting one of the following to true:
   // Default top SAO output port I2C0 channel
-    #define I2C_PORT0 false // true
+    #define I2C_PORT0 true
   // Optional use of the bottom SAO "input" port I2C1 channel as an output so Etch sAo Sketch and Demo Controller stack perfectly.
-    #define I2C_PORT1 true // false
+    #define I2C_PORT1 false
+
+// Choose only one filter type
+  #define EMA_FILTER     // Uses double precision floating point, slower compute
+  // #define IIR_FILTER        // Uses integers, faster
+
+// Filter strength 0 to 1, smaller numbers = heavier filtering
+  #define EMA_FILTER_ALPHA_X 0.1
+  #define EMA_FILTER_ALPHA_Y 0.1
+  #define IIR_FILTER_ALPHA_X 0.05
+  #define IIR_FILTER_ALPHA_Y 0.05
+
+#define EAS_V1_4 true
 
 #if I2C_PORT0
   #define I2C0_SDA_PIN 4
@@ -137,6 +162,11 @@
   #define I2C1_SDA_PIN 2
   #define I2C1_SCL_PIN 3
 #endif
+
+#define UserButtonPin1 14
+#define UserButtonPin2 15
+#define UserButtonPin3  7
+#define UserButtonPin4  6
 
 #define LED_ENABLE
 #ifdef LED_ENABLE
@@ -152,7 +182,7 @@
 
 // #define DEBUG_SHAKE
 // #define DEBUG_CURSOR
-#define DEBUG_ADC
+// #define DEBUG_ADC
 
 #define OLED_ADDRESS                0x3C      // OLED SSD1327 is 0x3C
 #define OLED_RESET                    -1
@@ -163,10 +193,10 @@
 #define OLED_BLACK                     0
 
 #if I2C_PORT0
-Adafruit_SSD1327 display(OLED_HEIGHT, OLED_WIDTH, &Wire, OLED_RESET, 1000000);
+Adafruit_SSD1327 display(OLED_HEIGHT, OLED_WIDTH, &Wire, OLED_RESET, 400000);
 #endif
 #if I2C_PORT1
-Adafruit_SSD1327 display(OLED_HEIGHT, OLED_WIDTH, &Wire1, OLED_RESET, 1000000);
+Adafruit_SSD1327 display(OLED_HEIGHT, OLED_WIDTH, &Wire1, OLED_RESET, 400000);
 #endif
 
 static uint8_t  color = OLED_WHITE;                        // 0-15 shades of gray
@@ -197,6 +227,8 @@ static uint8_t KeyStrokeDelay = 25; // 0-255 ms
 
 #define PIN_SAO_GPIO_1_ANA_POT_LEFT   A0      // Configured as left analog pot
 #define PIN_SAO_GPIO_2_ANA_POT_RIGHT  A1      // Configured as right analog pot
+#define PIN_ANA_CURRENT_MON           A2
+#define PIN_ANA_VOLTAGE_MON           A3
 uint16_t PotLeftADCCounts = 0;
 uint16_t PotRightADCCounts = 0;
 uint16_t PotLeftADCCountsOld = 0;
@@ -207,15 +239,18 @@ uint16_t PotMarginAtLimit = 10;
 // uint16_t PotFilterSampleCount = 3;
 // uint16_t deltaAbsolute = 0;
 // uint16_t CursorHystersisLimit = 4;
-int16_t AccelADCRangeLowCounts  =  9000; // 9000 works better with 3V supply. Was -1500;      // Tested with 3.3V supply voltage, R5 10K, R6 4K7
-int16_t AccelADCRangeHighCounts = 32512;
-int16_t AccelADCRangeLowmV      =   900;
-#if I2C_PORT0
-  int16_t AccelADCRangeHighmV     =  1200; // 1200 works better with 3V supply.
-#endif
-#if I2C_PORT1
-  int16_t AccelADCRangeHighmV     =  1400; // 1400 works better with 3.3V supply.
-#endif
+
+#if (HARDWARE_VERSION_MAJOR  == 1) && (HARDWARE_VERSION_MINOR  == 4)
+  int16_t AccelADCRangeLowCounts  = -6500; // 9000 works better with 3V supply. Was -1500;      // Tested with 3.3V supply voltage, R5 10K, R6 4K7
+  int16_t AccelADCRangeHighCounts = 26000;
+  int16_t AccelADCRangeLowmV      =   900;
+  int16_t AccelADCRangeHighmV;
+#else
+  int16_t AccelADCRangeLowCounts  = -3200; // 9000 works better with 3V supply. Was -1500;      // Tested with 3.3V supply voltage, R5 10K, R6 4K7
+  int16_t AccelADCRangeHighCounts = 30000;
+  int16_t AccelADCRangeLowmV      =   900;
+  int16_t AccelADCRangeHighmV;
+#endif 
 
 enum TopLevelMode                             // Top Level Mode State Machine
 {
@@ -225,6 +260,7 @@ enum TopLevelMode                             // Top Level Mode State Machine
   MODE_LOADING,
   MODE_RUN,
   MODE_SKETCH,
+  MODE_CALIBRATE,
   MODE_AT_THE_END_OF_TIME
 } ;
 uint8_t  TopLevelMode = MODE_INIT;
@@ -259,8 +295,8 @@ class EmaFilterWithPriming
       double m_lastOutput;
       bool m_firstRun;
   };
-  EmaFilterWithPriming emaFilterX(0.1);
-  EmaFilterWithPriming emaFilterY(0.1);
+  EmaFilterWithPriming emaFilterX(EMA_FILTER_ALPHA_X);
+  EmaFilterWithPriming emaFilterY(EMA_FILTER_ALPHA_Y);
 
   // TODO: IMPLEMENT THE BIT SHIFT IIR THAT WORKS TO THE POLES
   class IIRFilterWithIntegers
@@ -292,8 +328,8 @@ class EmaFilterWithPriming
       bool m_firstRun;
 };
 
-IIRFilterWithIntegers IIRFilterX(0.1);
-IIRFilterWithIntegers IIRFilterY(0.1);
+IIRFilterWithIntegers IIRFilterX(IIR_FILTER_ALPHA_X);
+IIRFilterWithIntegers IIRFilterY(IIR_FILTER_ALPHA_Y);
 
 void setup()
 {
@@ -302,6 +338,7 @@ void setup()
     Wire.setSDA(I2C0_SDA_PIN);
     Wire.setSCL(I2C0_SCL_PIN);
     Wire.begin();
+    Wire.setClock(400000); 
   #endif
 
   #if I2C_PORT1
@@ -309,9 +346,8 @@ void setup()
     Wire1.setSDA(I2C1_SDA_PIN);
     Wire1.setSCL(I2C1_SCL_PIN);
     Wire1.begin();
+    Wire1.setClock(400000); 
   #endif
-
-  // Nothing to see here. Everything runs in a simple state machine in the main loop function, and the bottom of this file.
 }
 
 bool SerialInit() {
@@ -330,6 +366,7 @@ bool OLEDInit() {
      return 1;
   }
   else {
+    Wire.setClock(400000); 
     Serial.println("Initialized!");
     OLEDClear();
   }
@@ -382,6 +419,7 @@ bool AccelerometerInit() {
     return 1;
   }
   else {
+    Wire.setClock(400000); 
     Serial.println("Initialized!");
     AccelerometerQuerySettings();
   }
@@ -440,13 +478,17 @@ void AccelerometerReadAccel() {
 
 bool AccelerometerSenseGestureErase() {
   bool UpSideDown;
+  bool ShakeUp;
+  bool ShakeDown;
   bool ShakeLeft;
   bool ShakeRight;
   bool ShakeInProgress;
+  static uint16_t ShakeUpCount;
+  static uint16_t ShakeDownCount;
   static uint16_t ShakeLeftCount;
   static uint16_t ShakeRightCount;
-  static uint16_t ShakeSensitivyThreshold = 10000;
-  static uint16_t ShakeCountThreshold = 100;
+  static uint16_t ShakeSensitivyThreshold = 8000;
+  static uint16_t ShakeCountThreshold = 50;
   static uint32_t ShakeTimeout = 1000; // Window of time that shaking must be active to clear the screen
   static uint32_t ShakeTimeNow;
   static uint32_t ShakeTimeLast = 0;
@@ -461,28 +503,46 @@ bool AccelerometerSenseGestureErase() {
   // Check for Right shake
   if (lis.y < -ShakeSensitivyThreshold) { ShakeRight = true; ShakeTimeLast = ShakeTimeNow; }
   else                { ShakeRight = false; }
+  // Check for Up shake
+  if (lis.x > ShakeSensitivyThreshold) { ShakeUp = true; ShakeTimeLast = ShakeTimeNow; }
+  else               { ShakeUp = false; }
+  // Check for Down shake
+  if (lis.x < -ShakeSensitivyThreshold) { ShakeDown = true; ShakeTimeLast = ShakeTimeNow; }
+  else                { ShakeDown = false; }
+
   if ((ShakeTimeNow - ShakeTimeLast) < ShakeTimeout) {ShakeInProgress = true;}
   else {ShakeInProgress = false;}
   // If it is actively being shaken...
   if (ShakeInProgress) {
-    // ...Accumulate left/right shakes...
+    // ...Accumulate left/right and up/down shakes...
     if (ShakeLeft) { ShakeLeftCount++; }
     if (ShakeRight) { ShakeRightCount++; }
+    if (ShakeUp) { ShakeUpCount++; }
+    if (ShakeDown) { ShakeDownCount++; }
   }
   // ...otherwise reset the counters.
   else {
     ShakeLeftCount = 0;
     ShakeRightCount = 0;
+    ShakeUpCount = 0;
+    ShakeDownCount = 0;
   }
   #ifdef DEBUG_SHAKE
     Serial.print(ShakeLeftCount);
     Serial.print(", ");
-    Serial.println(ShakeRightCount);
+    Serial.print(ShakeRightCount);
+    Serial.print(", ");
+    Serial.print(ShakeUpCount);
+    Serial.print(", ");
+    Serial.println(ShakeDownCount);
   #endif
   // If all conditions are met, signal screen clearing.
-  if ((ShakeLeftCount > ShakeCountThreshold) && (ShakeRightCount > ShakeCountThreshold)) {
+  if ( (ShakeLeftCount > ShakeCountThreshold) && (ShakeRightCount > ShakeCountThreshold) ||
+       (ShakeUpCount > ShakeCountThreshold) && (ShakeDownCount > ShakeCountThreshold)       ) {
     ShakeLeftCount = 0;
     ShakeRightCount = 0;
+    ShakeUpCount = 0;
+    ShakeDownCount = 0;
     OLEDBackgroundReset();
     return 1;
   }
@@ -495,8 +555,8 @@ bool AccelerometerSenseGestureChangeBackground() {
   bool ShakeRight;
   static uint16_t ShakeLeftCount;
   static uint16_t ShakeRightCount;
-  static uint16_t ShakeSensitivyThreshold = 10000;
-  static uint16_t ShakeCountThreshold = 30;
+  static uint16_t ShakeSensitivyThreshold = 7000;
+  static uint16_t ShakeCountThreshold = 20;
   AccelerometerReadAccel();
   // Is it up-side-down?
   if (lis.z < 10000) { RightSideUp = true;  }
@@ -581,7 +641,21 @@ void OLEDBackgroundReset() {
 }
 
 void SAOGPIOPinInit (){
-  // Nothing to do because analog input is default for Arduino.
+  pinMode(UserButtonPin1, INPUT_PULLUP);
+  pinMode(UserButtonPin2, INPUT_PULLUP);
+  pinMode(UserButtonPin3, INPUT_PULLUP);
+  pinMode(UserButtonPin4, INPUT_PULLUP);
+  // Nothing else to do because analog input is default for Arduino.
+}
+
+void SAOAnalogInit () {
+  #if I2C_PORT0
+    AccelADCRangeHighmV     =  1200; // 1200 works better with 3V supply.
+  #endif
+  #if I2C_PORT1
+    AccelADCRangeHighmV     =  1400; // 1400 works better with 3.3V supply.
+  #endif
+
 }
 
 void ModeTimeOutCheckReset () {
@@ -625,6 +699,44 @@ void CursorErase() {
   display.display();
 }
 
+void  PowerMonitor() {
+
+  uint16_t AdcRawUnmapped;
+  uint16_t AdcRawBBVoltage;
+  uint16_t AdcRawOutCurrent;
+  uint16_t AdcRawBatVoltage;
+
+  // uint16_t AdcRawUnmapped;
+  uint16_t AdcBBVoltagemV;
+  uint16_t AdcOutCurrentmA;
+  uint16_t AdcBatVoltagemV;
+
+  AdcRawUnmapped = analogRead(PIN_SAO_GPIO_1_ANA_POT_LEFT);
+
+  AdcRawBBVoltage = analogRead(PIN_SAO_GPIO_2_ANA_POT_RIGHT);
+  AdcBBVoltagemV = (AdcRawBBVoltage * 3300 / 1023 * 1.06 );
+
+  AdcRawOutCurrent = analogRead(PIN_ANA_CURRENT_MON);
+  AdcOutCurrentmA = (AdcRawOutCurrent * 3300 / 1023 / 2.5 );
+
+  AdcRawBatVoltage = analogRead(PIN_ANA_VOLTAGE_MON);
+  AdcBatVoltagemV = (AdcRawBatVoltage * 3300 / 1023 * 4.73 );
+
+  Serial.print("A0_unmapped: ");
+  Serial.print(AdcRawUnmapped);
+  Serial.print("     ");
+  Serial.print("A1_SAO Buck-Boost(mV): ");
+  Serial.print(AdcBBVoltagemV);
+  Serial.print("     ");
+  Serial.print("A2_SAO Load Current(mA): ");
+  Serial.print(AdcOutCurrentmA);
+  Serial.print("     ");
+  Serial.print("A3_VIN_VSW(mV): ");
+  Serial.println(AdcBatVoltagemV);
+
+}
+
+
 // -------------------------------------------------------------------------------------------
 // MAIN LOOP STARTS HERE
 // -------------------------------------------------------------------------------------------
@@ -633,6 +745,8 @@ void loop()
   #ifdef LED_ENABLE
     LEDBreath();
   #endif
+
+  // PowerMonitor();
 
   switch(TopLevelMode) {
     case MODE_INIT: {
@@ -644,6 +758,7 @@ void loop()
       #endif
       AccelerometerInit();
       SAOGPIOPinInit();
+      SAOAnalogInit();
       Serial.println("");
       Serial.println("  |------------------------------------------------------------------------------------| ");
       Serial.println("  | Welcome to the Etch sAo Sketch Demo made with Arduino IDE 2.3.2 using RP2040-Zero! | ");
@@ -963,98 +1078,24 @@ void loop()
       // if (cursorX < (cursorXold - CursorHystersisLimit) ) { cursorX = cursorXold;}
 
       // Filtering
-      #define FILTER_BITS   4
-      #define SHIFT_BITS    8
-      #define ROUNDUP       (2^SHIFT_BITS/2)
-      // K = 1 / 2 ^ FILTER_BITS
-      // y(n)        = K * x(n)     -  K * y(n-1)       +  y(n-1)
-      // filter_new  = frac_sample  -  frac_filter_old  +  filter_old
-      // local values are left-shifted up by SHIFT_BITS to maintain precision
+      #ifdef EMA_FILTER
+        double inputX = (double)cursorX;
+        double outputX = emaFilterX.Run(inputX);
+        cursorX = (uint16_t)outputX;
+      #endif
+      #ifdef IIR_FILTER
+        cursorX = IIRFilterX.Run(cursorX);
+      #endif
 
-/*
-      Serial.print("cursorX_in:");
-      Serial.print(cursorX);
-      Serial.print(",");
+      #ifdef EMA_FILTER
+        double inputY = (double)cursorY;
+        double outputY = emaFilterY.Run(inputY);
+        cursorY = (uint16_t)outputY;
+      #endif
+      #ifdef IIR_FILTER
+        cursorY = IIRFilterY.Run(cursorY);
+      #endif
 
-      uint32_t local_sampleX = ((uint32_t)cursorX) << SHIFT_BITS;
-      Serial.print("local_sampleX:");
-      Serial.print(local_sampleX);
-      Serial.print(",");
-
-      uint32_t local_sampleX_fraction = local_sampleX >> FILTER_BITS;
-      Serial.print("local_sampleX_fraction:");
-      Serial.print(local_sampleX_fraction);
-      Serial.print(",");
-
-      uint32_t local_cursorX_old = ((uint32_t)cursorXold) << SHIFT_BITS;
-      uint32_t local_cursorX_old_fraction = local_cursorX_old >> FILTER_BITS;
-
-      Serial.print("local_cursorX_old_fraction:-");
-      Serial.print(local_cursorX_old_fraction);
-      Serial.print(",");
-
-      Serial.print("local_cursorX_old:");
-      Serial.print(local_cursorX_old);
-      Serial.print(",");
-
-      uint32_t local_filterX_new = local_sampleX_fraction - local_cursorX_old_fraction + local_cursorX_old + ROUNDUP ;
-      Serial.print("local_filterX_new:");
-      Serial.print(local_filterX_new);
-      Serial.print(",");
-
-      Serial.print("cursorX:");
-      cursorX = (uint16_t) ( (local_filterX_new ) >> SHIFT_BITS);
-      if (cursorX > 127) {cursorX = 127;}
-      Serial.print(cursorX);
-      Serial.println();
-*/
-      double inputX = (double)cursorX;
-      double outputX = emaFilterX.Run(inputX);
-      cursorX = (uint16_t)outputX;
-/*
-      Serial.print("cursorX_out:");
-      Serial.print(cursorX);
-      Serial.println();
-
-      // Serial.print("cursorY:");
-      // Serial.print(cursorY);
-      // Serial.print(",");
-
-      uint32_t local_sampleY = ((uint32_t)cursorY) << SHIFT_BITS;
-      // Serial.print("local_sampleY:");
-      // Serial.print(local_sampleY);
-      // Serial.print(",");
-
-      uint32_t local_sampleY_fraction = local_sampleY >> FILTER_BITS;
-      // Serial.print("local_sampleY_fraction:");
-      // Serial.print(local_sampleY_fraction);
-      // Serial.print(",");
-
-      uint32_t local_cursorY_old = ((uint32_t)cursorYold) << SHIFT_BITS;
-      uint32_t local_cursorY_old_fraction = local_cursorY_old >> FILTER_BITS;
-
-      // Serial.print("local_cursorY_old_fraction:-");
-      // Serial.print(local_cursorY_old_fraction);
-      // Serial.print(",");
-
-      // Serial.print("local_cursorY_old:");
-      // Serial.print(local_cursorY_old);
-      // Serial.print(",");
-
-      uint32_t local_filterY_new = local_sampleY_fraction - local_cursorY_old_fraction + local_cursorY_old ;
-      // Serial.print("local_filterY_new:");
-      // Serial.print(local_filterY_new);
-      // Serial.print(",");
-
-      // Serial.print("cursorY:");
-      cursorY = (uint16_t) (local_filterY_new >> SHIFT_BITS);
-      if (cursorY > 127) {cursorY = 127;}
-      // Serial.print(cursorY);
-      // Serial.println();
-*/
-      double inputY = (double)cursorY;
-      double outputY = emaFilterY.Run(inputY);
-      cursorY = (uint16_t)outputY;
 
       PotLeftADCCountsOld = PotLeftADCCounts;
       PotRightADCCountsOld = PotRightADCCounts;
@@ -1094,6 +1135,99 @@ void loop()
       break;
     }
 
+    case MODE_CALIBRATE: {
+      static int16_t CalAccelBuffer = 800; // The readings are noisey, this buffer value keeps the min/max away from the edge.
+      static int16_t CalAccelADC1maxCounts = 0;
+      static int16_t CalAccelADC1avgCounts = 0;
+      static int16_t CalAccelADC1minCounts = 0;
+      static int16_t CalAccelADC2maxCounts = 0;
+      static int16_t CalAccelADC2avgCounts = 0;
+      static int16_t CalAccelADC2minCounts = 0;
+      static int16_t CalAccelADCmaxUpperLimCounts = 0;
+      static int16_t CalAccelADCmaxLowerLimCounts = 0;
+      static int16_t CalAccelADCminUpperLimCounts = 0;
+      static int16_t CalAccelADCminLowerLimCounts = 0;
+      uint8_t CursorPosXforX;
+      uint8_t CursorPosYforX;
+      uint8_t CursorPosXforY;
+      uint8_t CursorPosYforY;
+      if (ModeTimeoutFirstTimeRun) {
+        ModeTimeoutFirstTimeRun = false;
+        Serial.println(">>> Entered MODE_RUN.");
+        OLEDClear();
+        ModeTimeOutCheckReset();
+      }
+      // Check ADC values
+      int16_t adc1 = lis.readADC(1);
+      double inputX = (double)adc1;
+      double outputX = emaFilterX.Run(inputX);
+      CalAccelADC1avgCounts = (int16_t)outputX;
+      if((CalAccelADC1avgCounts - CalAccelBuffer) > CalAccelADC1maxCounts) {CalAccelADC1maxCounts = CalAccelADC1avgCounts - CalAccelBuffer;}
+      if((CalAccelADC1avgCounts + CalAccelBuffer) < CalAccelADC1minCounts) {CalAccelADC1minCounts = CalAccelADC1avgCounts + CalAccelBuffer;}
+
+      int16_t adc2 = lis.readADC(2);
+      double inputY = (double)adc2;
+      double outputY = emaFilterX.Run(inputY);
+      CalAccelADC2avgCounts = (int16_t)outputY;
+      if((CalAccelADC2avgCounts - CalAccelBuffer) > CalAccelADC2maxCounts) {CalAccelADC2maxCounts = CalAccelADC2avgCounts - CalAccelBuffer;}
+      if((CalAccelADC2avgCounts + CalAccelBuffer) < CalAccelADC2minCounts) {CalAccelADC2minCounts = CalAccelADC2avgCounts + CalAccelBuffer;}
+
+      if (CalAccelADC1maxCounts < CalAccelADC2maxCounts) {AccelADCRangeHighCounts = CalAccelADC1maxCounts; }
+      else { AccelADCRangeHighCounts = CalAccelADC2maxCounts; }
+      if (CalAccelADC1minCounts < CalAccelADC2minCounts) {AccelADCRangeLowCounts = CalAccelADC2minCounts; }
+      else { AccelADCRangeLowCounts = CalAccelADC1minCounts; }
+
+      // Update the display
+      uint8_t DataOffset = 68;
+      display.clearDisplay();
+      display.setCursor(2,0);
+      display.print("FWV: ");
+      display.print(FirmwareVersionMajor);
+      display.print(".");
+      display.print(FirmwareVersionMinor);
+      display.print(".");
+      display.print(FirmwareVersionPatch);
+      display.setCursor(2,8);
+      display.println("Turn both knobs full");
+      display.setCursor(2,16);
+      display.println("left and full right.");
+      display.setCursor(2,24);
+      display.println("L MAX (X):");
+      display.setCursor(2,32);
+      display.println("L NOW (X):");
+      display.setCursor(2,40);
+      display.println("L MIN (X):");
+      display.setCursor(2,48);
+      display.println("R MAX (Y):");
+      display.setCursor(2,56);
+      display.println("R NOW (Y):");
+      display.setCursor(2,64);
+      display.println("R MIN (Y):");
+
+      display.setCursor(DataOffset,24);
+      display.println(CalAccelADC1maxCounts);
+      display.setCursor(DataOffset,32);
+      display.println(adc1);
+      display.setCursor(DataOffset,40);
+      display.println(CalAccelADC1minCounts);
+      display.setCursor(DataOffset,48);
+      display.println(CalAccelADC2maxCounts);
+      display.setCursor(DataOffset,56);
+      display.println(adc2);
+      display.setCursor(DataOffset,64);
+      display.println(CalAccelADC2minCounts);
+      display.display();
+
+      // Check for timeout from this mode
+      if (ModeTimeOutCheck(6000)){ 
+        ModeTimeOutCheckReset();
+        TopLevelMode = MODE_SKETCH;
+        ModeTimeoutFirstTimeRun = true;
+        Serial.println(">>> Timeout. Leaving MODE_CALIBRATE.");
+      }
+      break;
+    }
+
     case MODE_AT_THE_END_OF_TIME: {
       Serial.println(">>> Stuck in the MODE_AT_THE_END_OF_TIME! <<<");
       break;
@@ -1104,4 +1238,9 @@ void loop()
       break;
     }
   }
+    
+  if(!digitalRead(UserButtonPin1)) {
+    TopLevelMode = MODE_CALIBRATE;
+  }
+
 }
