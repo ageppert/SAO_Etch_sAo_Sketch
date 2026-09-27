@@ -21,8 +21,8 @@
 #include <U8g2lib.h>
 
 // Choose one port
-  // #define I2C_PORT0 true
-  #define I2C_PORT1 true
+  #define I2C_PORT0 true
+  // #define I2C_PORT1 true
 
 #if I2C_PORT0
   #define I2C0_SDA_PIN 4
